@@ -70,6 +70,7 @@
 | 3 | Детерминированный движок (CLI-MVP) | На любой URL получаем JSON Finding'ов по детерминированным правилам | ✅ Done | [iteration-03-deterministic-engine.md](tasks/iteration-03-deterministic-engine.md) |
 | 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | ✅ Done | [iteration-04-api.md](tasks/iteration-04-api.md) |
 | 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | ✅ Done | [iteration-05-design.md](tasks/iteration-05-design.md) |
+| 5а | Auth refactor: форма входа и разделение free/LLM | API на cookie-сессиях; `POST /scans` принимает `with_llm`, без сессии для `with_llm=true` — 401 | 📋 Planned | [iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | 📋 Planned | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
 | 8 | Production-деплой на Beget VPS | Приложение поднято на VPS под HTTPS | 📋 Planned | [iteration-08-deploy.md](tasks/iteration-08-deploy.md) |
@@ -194,6 +195,8 @@
 
 **Артефакты:** `app/api/`, `app/auth.py`, `app/db.py`, `app/report/`, `tools/create_user.py`, `prompts/` (структура; промпты появятся в итерации 7).
 
+> *Basic Auth итерации 4 был временным MVP-решением: он закрыл вопрос аутентификации одним приёмом и позволил сосредоточиться на API, SSE и PDF. Продуктовая модель «бесплатно всем / LLM — только владельцу» требует формы входа на сайте и условного доступа на уровне эндпоинта — это сделано в итерации 5а.*
+
 ---
 
 ### Итерация 5: Выбор и согласование дизайна UI
@@ -221,31 +224,65 @@
 
 ---
 
+### Итерация 5а: Auth refactor — форма входа и разделение free/LLM
+
+**Цель:** перевести API с Basic Auth на форму входа + cookie-сессию; разделить `POST /api/v1/scans` на бесплатную ветку (детерминированные правила, без auth) и ветку с расширенным анализом (`with_llm=true`, требует валидной сессии). После закрытия итерации фронт пишется уже под целевую модель доступа без переходных решений.
+
+**Стартовый контекст:** [vision.md](vision.md) — разделы «Аутентификация и доступ», «Модель данных / состояние» (таблицы `users`, `sessions`), «Работа с LLM → Доступ к LLM-проверкам», «Сценарии работы пользователя» (Первое посещение, Нестандартные ситуации), «Конфигурация и секреты»; закрытая [iteration-04-api.md](tasks/iteration-04-api.md) как точка старта по коду.
+
+**Критерии завершения (DoD):**
+- Таблица `sessions` создаётся в `app/db.py` (`CREATE TABLE IF NOT EXISTS`, индекс по `expires_at`).
+- `app/auth.py` переписан без `HTTPBasic`. Появляются: `create_session(login) -> session_id`, `delete_session(session_id)`, `get_user_by_session(session_id) -> str | None` (обновляет `last_seen_at`), Depends `get_optional_user` и `require_user` для FastAPI.
+- Новый `app/api/auth.py`: `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Pydantic-модели `LoginRequest`, `UserInfo`. На неверном пароле — 401 с единой формулировкой (без enumeration).
+- `app/api/scan.py`: убрана глобальная `dependencies=[Depends(get_current_user)]` на роутере; `POST /scans` принимает `{url: str, with_llm: bool = False}`; если `with_llm=true` без валидной сессии — 401. `GET /scans/{id}`, `/events`, `/report.pdf` публичны (UUID — достаточная защита для MVP).
+- `ScanState` дополнен полем `with_llm: bool` (immutable, фиксируется при создании); `run_scan` принимает флаг keyword-only аргументом. В итерации 5а engine просто принимает и сохраняет флаг — семантических check-функций ещё нет, фильтровать нечего. Механизм отбора LLM-check'ов вводится в итерации 7.
+- `app/config.py`: `BASIC_AUTH_REALM` удалён; добавлены `session_cookie_name`, `session_ttl_days`, `session_cookie_secure`. `.env.example` синхронизирован.
+- `tools/create_user.py` без изменений.
+- `tests/test_auth.py` переписан: login → cookie → /me → logout, ошибка пароля, ошибка с истёкшей сессией, очистка истёкших сессий при login.
+- `tests/test_api_scans.py` обновлён: анонимный POST /scans → 202 и работает, POST /scans с `with_llm=true` без cookie → 401, с cookie → 202; GET /scans/{id}, /events, /report.pdf публичны.
+- End-to-end через `curl`:
+  1. Анонимный POST `/scans` → SSE → PDF.
+  2. `POST /auth/login` → cookie → `POST /scans {with_llm: true}` → SSE → PDF.
+  3. `POST /auth/logout` → следующий `POST /scans {with_llm: true}` → 401.
+
+**Связь с tasklist:** [tasks/iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md)
+
+**Полезный результат:** API соответствует продуктовой модели «бесплатно всем / LLM-только-владельцу». Фронт итерации 6 пишется сразу под форму входа + тоггл `with_llm`, без переходного Basic Auth.
+
+**Артефакты:** обновлённые `app/auth.py`, `app/db.py`, `app/api/scan.py`, `app/config.py`; новый `app/api/auth.py`; обновлённые `.env.example`, `tests/test_auth.py`, `tests/test_api_scans.py`.
+
+---
+
 ### Итерация 6: Frontend MVP
 
 **Цель:** реализовать пользовательский UI поверх готового API по утверждённому в итерации 5 дизайну — полный сценарий «ввёл URL → увидел прогресс → получил отчёт → скачал PDF» работает в браузере.
 
 **Стартовый контекст:** утверждённый [docs/design.md](design.md) и живой прототип [docs/design/preview.html](design/preview.html) из итерации 5; [vision.md](vision.md) — разделы «Сценарии работы пользователя» (поведение раскрытых карточек, нормализация URL, нестандартные ситуации), «Структура репозитория» (раскладка `frontend/`), «Технологии» → Frontend (Next.js + Tailwind, static export).
 
-**Предусловия (унаследованы из итерации 5 — см. [docs/design.md § 15](design.md)):**
+**Предусловия (унаследованы из итерации 5 — см. [docs/design.md § 15](design.md), и из итерации 5а):**
 
-Перед стартом вёрстки фронта необходимо закрыть **две data/architecture-задачи**, без которых UI будет работать на хардкоде:
+Перед стартом вёрстки фронта необходимо закрыть **три задачи**, без которых UI будет работать на хардкоде или на устаревшем контракте API:
 
 - **ADR-0002 — расширение схемы корпуса** ([docs/laws/schema.md](laws/schema.md) + 15 YAML-файлов корпуса + пересборка `docs/laws/index.yml`):
   - На уровне закона: `short_description`, `icon` (Lucide-имя), `category` (одна из `privacy` / `cookies` / `advertising` / `consumer` / `info` / `copyright`).
   - На уровне `violations[]`: `evidence_template` — имя шаблона мини-превью.
 - **`CorpusBundle.for_categories` — категоризация для шагов прогресса.** Решить: бэк публикует `step`-события (правка [app/engine.py](../app/engine.py) и [app/events.py](../app/events.py)) или UI группирует `violation_evaluated` на лету по полю `category`. От этого зависит контракт SSE-стрима.
+- **Итерация 5а закрыта** — API использует cookie-сессии, `POST /scans` принимает `with_llm`, есть `GET /api/v1/auth/me`. Без этого фронту нечего вызывать для авторизованной ветки.
 
-Эти два пункта должны быть первыми в tasklist'е итерации 6.
+Эти три пункта должны быть первыми в tasklist'е итерации 6.
 
 **Критерии завершения (DoD):**
 - Скелет `frontend/`: Next.js 15 + Tailwind, `output: 'export'` в `next.config.mjs`, `pnpm build` собирается в `frontend/out/`
 - Реализация соответствует утверждённым мокапам и палитре из `docs/design.md`
 - Главная страница: инпут для URL + кнопка «Проверить», лёгкая клиентская валидация на пустоту/мусор
+- Под CTA-карточкой — тоггл «Расширенный анализ»: disabled со ссылкой «Войти» для анонимного пользователя; активный (по умолчанию выкл.) для авторизованного. Значение тоггла уходит в `POST /api/v1/scans {with_llm}`
+- Страница `/login` (Фаза 0 в `docs/design.md`): форма с inline-ошибкой, успех — редирект на `/`, сервер ставит cookie
+- В шапке: кнопка «Войти» для анонимного, `<login>` + «Выйти» для авторизованного. Состояние определяется через `GET /api/v1/auth/me` при загрузке любой страницы (всегда 200; `login: null` → анонимная ветка, строка → авторизованная); logout дергает `POST /api/v1/auth/logout`
 - Прогресс-страница: `EventSource` подключается к SSE, отрисовывает текущий шаг, счётчик найденных нарушений по severity
 - Страница результата: список Finding'ов, **все карточки раскрыты по умолчанию**, кнопки «Свернуть все» / «Раскрыть все» сверху, индивидуальная сворачивалка у каждой карточки
+- Если скан запущен без LLM — в результатах виден явный блок «Расширенный анализ доступен после входа» (даже при `inconclusive=0` от детерминированных проверок)
 - Кнопка «Скачать PDF» дёргает `/report.pdf`, файл сохраняется с именем `legal-audit-<host>-<date>.pdf`
-- Обработка нестандартных ситуаций: 401, недоступный сайт, таймаут, `inconclusive`-проверки (отображаются отдельной секцией)
+- Обработка нестандартных ситуаций: 401 на `with_llm=true` без сессии (мягкое предложение войти), недоступный сайт, таймаут, `inconclusive`-проверки (отображаются отдельной секцией)
 - Сборка `pnpm build` → `frontend/out/` отдаётся FastAPI через `StaticFiles`
 - Локальная dev-разработка работает в двух терминалах (`make dev` + `make dev-frontend` с проксированием `/api`)
 
@@ -266,6 +303,7 @@
 **Стартовый контекст:** [vision.md](vision.md) — раздел «Работа с LLM» целиком (интерфейс провайдера, промпты, нормализация контента, ключ кэша, бюджет токенов, особенности GigaChat, обработка ошибок); [laws/schema.md](laws/schema.md) — поле `check` в детекции (расширение под semantic-проверки потребует ADR).
 
 **Критерии завершения (DoD):**
+- Семантические check-функции вызываются движком **только если** `ScanState.with_llm == True` (контракт зафиксирован в итерации 5а). Без флага — пропускаются молча, в SSE/finding'и не публикуются.
 - Принят ADR на расширение схемы корпуса под семантические check-функции (новый тип `check` или поле `semantic_check`) — обновляется `docs/laws/schema.md`
 - `app/llm/base.py` — интерфейс `LLMProvider` + `StructuredAnswer`
 - `app/llm/gigachat.py` — `GigaChatProvider` с OAuth по `expires_at`, ретраями 5xx/429, распознаванием контент-модерации
@@ -299,7 +337,7 @@
 - Инструкция по развёртыванию в `docs/deploy.md` (или соответствующем разделе): создание VPS на Beget, установка Docker, certbot для Let's Encrypt, nginx как reverse-proxy с HTTPS на 443
 - Скрипт обновления: `git pull && docker build && docker run` (или ручная последовательность с пояснениями)
 - `--restart unless-stopped` для Docker — контейнер сам поднимается после ребута/падения
-- Проверочный чек-лист: HTTPS работает, Basic Auth срабатывает, скан реального сайта проходит end-to-end, PDF скачивается, перезапуск контейнера не теряет пользователей и LLM-кэш
+- Проверочный чек-лист: HTTPS работает; форма входа работает, cookie ставится с `Secure`-флагом и переживает обновление страницы; анонимный скан без `with_llm` проходит end-to-end; авторизованный скан с `with_llm=true` тоже; PDF скачивается; перезапуск контейнера не теряет пользователей, активные сессии и LLM-кэш
 
 **Связь с tasklist:** [tasks/iteration-08-deploy.md](tasks/iteration-08-deploy.md)
 
