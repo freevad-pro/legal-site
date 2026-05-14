@@ -1,6 +1,6 @@
 # На Windows требует GNU Make: либо WSL, либо `choco install make`.
 
-.PHONY: install dev lint fmt test corpus
+.PHONY: install dev lint fmt test corpus scan
 
 install:
 	uv sync
@@ -21,3 +21,6 @@ test:
 
 corpus:
 	uv run python tools/rebuild_index.py
+
+scan:
+	uv run python -m app.scan $(URL)

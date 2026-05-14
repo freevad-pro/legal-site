@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
     corpus_path: Path = Path("docs/laws")
+    scan_timeout_seconds: int = 60
+    user_agent: str = "LegalSiteScanner/0.1 (+https://github.com/freevad-pro/legal-site)"
 
 
 settings = Settings()

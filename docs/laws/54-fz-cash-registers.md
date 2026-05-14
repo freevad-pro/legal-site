@@ -96,27 +96,27 @@ violations:
       - subject: sole_proprietor
         coap_article: "ст. 14.5 КоАП РФ, ч. 2"
         amount_min: 10000
-        amount_max: 0
+        amount_max: null
         currency: RUB
-        notes: "От 25% до 50% суммы расчёта, но не менее 10 000 руб (формула: max(amount * 0.25, 10000))"
+        notes: "От 25% до 50% суммы расчёта, но не менее 10 000 руб (формула: max(amount * 0.25, 10000)); верхняя граница не зафиксирована — пропорциональна обороту"
       - subject: official
         coap_article: "ст. 14.5 КоАП РФ, ч. 2"
         amount_min: 10000
-        amount_max: 0
+        amount_max: null
         currency: RUB
-        notes: "От 25% до 50% суммы расчёта без применения ККТ, не менее 10 000 руб"
+        notes: "От 25% до 50% суммы расчёта без применения ККТ, не менее 10 000 руб; верхняя граница не зафиксирована"
       - subject: small_org
         coap_article: "ст. 14.5 КоАП РФ, ч. 2 + ст. 4.1.2"
         amount_min: 15000
-        amount_max: 0
+        amount_max: null
         currency: RUB
-        notes: "От 37,5% до 50% суммы расчёта (половинный размер для МСП), не менее 15 000 руб"
+        notes: "От 37,5% до 50% суммы расчёта (половинный размер для МСП), не менее 15 000 руб; верхняя граница не зафиксирована"
       - subject: organization
         coap_article: "ст. 14.5 КоАП РФ, ч. 2"
         amount_min: 30000
-        amount_max: 0
+        amount_max: null
         currency: RUB
-        notes: "От 75% до 100% суммы расчёта без применения ККТ, не менее 30 000 руб"
+        notes: "От 75% до 100% суммы расчёта без применения ККТ, не менее 30 000 руб; верхняя граница не зафиксирована"
       - subject: organization
         coap_article: "ст. 14.5 КоАП РФ, ч. 3"
         amount_min: 0

@@ -67,7 +67,7 @@
 | 0 | Фундамент документации | Зафиксированы идея, видение, ADR, схема корпуса, эталонный 152-ФЗ | ✅ Done | — |
 | 1 | Корпус MVP — 15 актов + 2 обзора | Полный валидированный справочник законов, 100 нарушений | ✅ Done | — |
 | 2 | Каркас приложения и инструментарий | Рабочая разработческая среда: FastAPI отвечает, `make` команды работают | ✅ Done | [iteration-02-skeleton.md](tasks/iteration-02-skeleton.md) |
-| 3 | Детерминированный движок (CLI-MVP) | На любой URL получаем JSON Finding'ов по детерминированным правилам | 📋 Planned | [iteration-03-deterministic-engine.md](tasks/iteration-03-deterministic-engine.md) |
+| 3 | Детерминированный движок (CLI-MVP) | На любой URL получаем JSON Finding'ов по детерминированным правилам | ✅ Done | [iteration-03-deterministic-engine.md](tasks/iteration-03-deterministic-engine.md) |
 | 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | 📋 Planned | [iteration-04-api.md](tasks/iteration-04-api.md) |
 | 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | 📋 Planned | [iteration-05-design.md](tasks/iteration-05-design.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | 📋 Planned | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
