@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Legal Site — превью дизайна</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Onest', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          bg:   { base: '#FFFFFF', soft: '#F4F4F4', gray: '#EEEEEE' },
+          ink:  { primary: '#1F1F1F', secondary: '#666666', muted: '#ADADAD', faint: '#D0D0D0' },
+          line: { DEFAULT: '#ECECEC', strong: '#D0D0D0' },
+          brand:{ DEFAULT: '#26AD50', hover: '#1F9544', dark: '#144942', soft: '#E5F4EA' },
+          link: { DEFAULT: '#1F6FBF', hover: '#0C5DAB' },
+          sev: {
+            crit: '#C73C3C', critSoft: '#FBE9E9', critBorder: '#F2BCBC',
+            high: '#D87A1A', highSoft: '#FBEDD9', highBorder: '#EFCB94',
+            med:  '#C99A1F', medSoft:  '#FAF1D2', medBorder:  '#EDD584',
+            low:  '#3E7FBF', lowSoft:  '#E6F0FA', lowBorder:  '#B5D0EB',
+            inc:  '#666666', incSoft:  '#F4F4F4', incBorder:  '#D0D0D0',
+          },
+          fav: {
+            a: '#2563EB', b: '#7C3AED', c: '#DB2777', d: '#DC2626', e: '#EA580C',
+            f: '#CA8A04', g: '#16A34A', h: '#0891B2', i: '#4F46E5',
+          },
+        },
+        borderRadius: {
+          'card':  '16px',
+          'btn':   '8px',
+          'input': '8px',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html, body { background: #FFFFFF; }
+  body { font-family: 'Onest', 'Segoe UI', Arial, sans-serif; color: #1F1F1F; -webkit-font-smoothing: antialiased; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* Skip-link */
+  .skip-link {
+    position: absolute; top: -100px; left: 16px;
+    background: #1F1F1F; color: #fff;
+    padding: 10px 16px; border-radius: 8px;
+    font-weight: 600; z-index: 9999;
+    transition: top 160ms ease;
+    text-decoration: none;
+  }
+  .skip-link:focus { top: 12px; }
+
+  /* Тонкий dot-pattern для зелёных плашек */
+  .dot-pattern {
+    background-image: radial-gradient(rgba(255,255,255,0.10) 1.5px, transparent 1.5px);
+    background-size: 22px 22px;
+    background-position: 0 0;
+  }
+
+  /* Прогресс-бар: диагональная штриховка по зелёному */
+  @keyframes progress-stripe {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 0; }
+  }
+  .progress-bar-fill {
+    background:
+      repeating-linear-gradient(45deg,
+        rgba(255,255,255,0.20) 0 8px,
+        transparent 8px 20px),
+      #26AD50;
+    background-size: 40px 100%, 100% 100%;
+    animation: progress-stripe 1s linear infinite;
+    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Пульсирующая точка */
+  @keyframes ping-soft {
+    0%   { transform: scale(1); opacity: 0.8; }
+    75%, 100% { transform: scale(2); opacity: 0; }
+  }
+  .pulse-dot::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 9999px; background: #26AD50;
+    animation: ping-soft 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* Spin */
+  @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+  .spin { animation: spin 1.1s linear infinite; }
+
+  /* Лёгкий bump на счётчике */
+  @keyframes count-bump {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  .bump { animation: count-bump 320ms ease-out; }
+
+  /* Появление */
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .rise { animation: rise 360ms ease-out both; }
+
+  @keyframes rise-lg { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .rise-lg { animation: rise-lg 440ms ease-out both; }
+
+  /* Live-микро-обновление: имя нарушения всплывает */
+  @keyframes flash-in {
+    0% { opacity: 0; transform: translateY(8px); }
+    20%, 80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-4px); }
+  }
+  .flash-in { animation: flash-in 2.6s ease-out forwards; }
+
+  /* Marquee */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .marquee-track {
+    display: flex; gap: 8px; width: max-content;
+    animation: marquee 55s linear infinite;
+  }
+  .marquee-track:hover { animation-play-state: paused; }
+  @media (max-width: 640px) { .marquee-track { animation-duration: 40s; } }
+
+  /* Карточки преимуществ — серая заливка, без теней */
+  .card-gray { background: #F4F4F4; border-radius: 16px; transition: background 200ms ease, transform 200ms ease; cursor: pointer; }
+  .card-gray:hover { background: #EEEEEE; }
+  .card-gray .cat-arrow { opacity: 0; transform: translateX(-4px); transition: opacity 200ms ease, transform 200ms ease; }
+  .card-gray:hover .cat-arrow { opacity: 1; transform: translateX(0); }
+  .card-gray:hover .cat-icon { transform: scale(1.08); }
+  .cat-icon { transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+  /* Law-card в карусели */
+  .law-card { background: #F4F4F4; border-radius: 12px; transition: background 200ms ease; }
+  .law-card:hover { background: #EAEAEA; }
+  .law-card:hover .law-icon { transform: scale(1.10); background: #26AD50; color: #fff; }
+  .law-icon { transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms ease, color 200ms ease; }
+
+  /* Раскрытие нарушения */
+  .finding-body { overflow: hidden; transition: max-height 280ms ease, opacity 200ms ease; }
+  .finding-collapsed .finding-body { max-height: 0 !important; opacity: 0; }
+  .finding-collapsed .chevron { transform: rotate(-90deg); }
+  .chevron { transition: transform 200ms ease; }
+
+  .sev-stripe { box-shadow: inset 3px 0 0 0 var(--stripe); }
+
+  :focus-visible { outline: 2px solid #26AD50; outline-offset: 2px; border-radius: 4px; }
+  .btn-press:active { transform: translateY(1px); }
+  button, a, [role="button"] { touch-action: manipulation; }
+
+  /* Sticky шапка отчёта */
+  .report-bar { position: sticky; top: 64px; z-index: 20; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .marquee-track, .progress-bar-fill, .pulse-dot::after { animation: none !important; }
+  }
+</style>
+</head>
+<body class="min-h-dvh">
+
+<a href="#main" class="skip-link">Перейти к содержимому</a>
+
+<!-- Шапка -->
+<header class="border-b border-line bg-bg-base sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-bg-base/85">
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="inline-flex items-center gap-2.5 font-bold text-[20px] text-ink-primary no-underline tracking-tight">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M16 2.5L4.5 6.5V15.5C4.5 22.4 9.4 28.1 16 30C22.6 28.1 27.5 22.4 27.5 15.5V6.5L16 2.5Z" fill="#26AD50"/>
+        <path d="M10.5 16.2L14.2 19.9L21.5 12.6" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Legal Site</span>
+    </a>
+    <nav class="hidden lg:flex items-center gap-7 text-[15px] text-ink-secondary">
+      <a href="#how-it-works" class="hover:text-ink-primary transition">Как работает</a>
+      <a href="#laws-marquee" class="hover:text-ink-primary transition">Какие законы</a>
+    </nav>
+    <div class="flex items-center gap-3 text-[15px]">
+      <span class="hidden md:inline text-ink-muted mono text-xs">vadim@example.ru</span>
+      <button aria-label="Выйти" class="btn-press inline-flex items-center gap-1.5 px-3 h-10 rounded-btn text-ink-secondary hover:bg-bg-soft transition cursor-pointer">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Выйти</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- Hero -->
+<section id="hero" class="bg-bg-base">
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-10">
+    <div class="max-w-[860px]">
+      <h1 class="rise text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.1] tracking-tight font-bold text-ink-primary mb-5" style="animation-delay: 0ms;">
+        Проверка сайта на соответствие законодательству&nbsp;РФ
+      </h1>
+      <p class="rise text-[18px] sm:text-[20px] text-ink-secondary leading-relaxed max-w-[620px]" style="animation-delay: 60ms;">
+        Введите адрес — получите отчёт с найденными нарушениями, ссылками на статьи закона,
+        штрафами и рекомендациями. PDF скачивается в один клик.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Зелёная карточка-CTA -->
+<section id="cta-search" class="bg-bg-base">
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="rise-lg relative rounded-card p-6 sm:p-10 lg:p-12 text-white overflow-hidden dot-pattern" style="background-color: #26AD50;">
+      <!-- декоративный геометрический акцент -->
+      <svg class="absolute -right-10 -bottom-10 opacity-15 hidden sm:block" width="280" height="280" viewBox="0 0 280 280" fill="none" aria-hidden="true">
+        <circle cx="140" cy="140" r="135" stroke="white" stroke-width="2"/>
+        <circle cx="140" cy="140" r="95" stroke="white" stroke-width="2"/>
+        <circle cx="140" cy="140" r="55" stroke="white" stroke-width="2"/>
+        <path d="M85 140L125 180L195 110" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+
+      <div class="relative">
+        <h2 class="text-[24px] sm:text-[32px] font-bold leading-tight mb-6">Проверьте сайт прямо сейчас</h2>
+
+        <form id="scan-form" class="flex flex-col sm:flex-row gap-3 max-w-[820px]" onsubmit="event.preventDefault(); startScan();">
+          <div class="relative flex-1">
+            <label for="url-input" class="sr-only">Адрес сайта для проверки</label>
+            <input id="url-input" type="text" value="example.ru"
+              placeholder="Введите адрес сайта"
+              inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false"
+              class="w-full h-14 sm:h-16 px-5 rounded-input bg-white text-[18px] text-ink-primary placeholder:text-ink-muted focus:outline-none focus:ring-4 focus:ring-white/30 transition" />
+          </div>
+          <button type="submit" class="btn-press h-14 sm:h-16 px-8 rounded-input bg-ink-primary text-white text-[18px] font-bold hover:bg-black transition inline-flex items-center justify-center gap-2 cursor-pointer">
+            Проверить
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+        </form>
+
+        <p class="mt-4 text-white/85 text-[15px]">
+          Бесплатно · без регистрации · результат за 1–3 минуты
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Что найдём -->
+<section id="how-it-works" class="bg-bg-base">
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+    <h2 class="text-[24px] sm:text-[28px] font-bold text-ink-primary mb-6">Что найдём на сайте</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <article class="card-gray p-6 group relative">
+        <div class="cat-icon w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4">
+          <i data-lucide="lock" class="w-5 h-5 text-brand"></i>
+        </div>
+        <div class="text-[17px] font-bold text-ink-primary mb-1.5">Персональные данные</div>
+        <div class="text-[14px] text-ink-secondary leading-snug">
+          152-ФЗ, согласия, политика обработки, локализация
+        </div>
+        <i data-lucide="arrow-up-right" class="cat-arrow absolute top-6 right-6 w-4 h-4 text-brand"></i>
+      </article>
+      <article class="card-gray p-6 group relative">
+        <div class="cat-icon w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4">
+          <i data-lucide="cookie" class="w-5 h-5 text-brand"></i>
+        </div>
+        <div class="text-[17px] font-bold text-ink-primary mb-1.5">Cookie и трекеры</div>
+        <div class="text-[14px] text-ink-secondary leading-snug">
+          Установка до согласия, баннер, сторонние счётчики
+        </div>
+        <i data-lucide="arrow-up-right" class="cat-arrow absolute top-6 right-6 w-4 h-4 text-brand"></i>
+      </article>
+      <article class="card-gray p-6 group relative">
+        <div class="cat-icon w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4">
+          <i data-lucide="megaphone" class="w-5 h-5 text-brand"></i>
+        </div>
+        <div class="text-[17px] font-bold text-ink-primary mb-1.5">Реклама и маркировка</div>
+        <div class="text-[14px] text-ink-secondary leading-snug">
+          38-ФЗ, пометка «Реклама», erid, рекламная кампания
+        </div>
+        <i data-lucide="arrow-up-right" class="cat-arrow absolute top-6 right-6 w-4 h-4 text-brand"></i>
+      </article>
+      <article class="card-gray p-6 group relative">
+        <div class="cat-icon w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4">
+          <i data-lucide="users" class="w-5 h-5 text-brand"></i>
+        </div>
+        <div class="text-[17px] font-bold text-ink-primary mb-1.5">Защита потребителей</div>
+        <div class="text-[14px] text-ink-secondary leading-snug">
+          ЗоЗПП, реквизиты продавца, правила продажи, оферта
+        </div>
+        <i data-lucide="arrow-up-right" class="cat-arrow absolute top-6 right-6 w-4 h-4 text-brand"></i>
+      </article>
+      <article class="card-gray p-6 group relative">
+        <div class="cat-icon w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4">
+          <i data-lucide="file-text" class="w-5 h-5 text-brand"></i>
+        </div>
+        <div class="text-[17px] font-bold text-ink-primary mb-1.5">Информация и контент</div>
+        <div class="text-[14px] text-ink-secondary leading-snug">
+          149-ФЗ, сведения о владельце, контент, хостинг
+        </div>
+        <i data-lucide="arrow-up-right" class="cat-arrow absolute top-6 right-6 w-4 h-4 text-brand"></i>
+      </article>
+      <article class="card-gray p-6 group relative">
+        <div class="cat-icon w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4">
+          <i data-lucide="copyright" class="w-5 h-5 text-brand"></i>
+        </div>
+        <div class="text-[17px] font-bold text-ink-primary mb-1.5">Авторское право</div>
+        <div class="text-[14px] text-ink-secondary leading-snug">
+          ГК ч. IV, товарные знаки, чужой контент, цитирование
+        </div>
+        <i data-lucide="arrow-up-right" class="cat-arrow absolute top-6 right-6 w-4 h-4 text-brand"></i>
+      </article>
+    </div>
+    <div class="mt-5 text-center">
+      <a href="#laws-marquee" class="inline-flex items-center gap-1.5 text-[14px] text-ink-secondary hover:text-ink-primary transition">
+        Платежи, защита детей, гос. язык и другие — в полном списке законов
+        <i data-lucide="arrow-down" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Лента законов -->
+<section id="laws-marquee" class="bg-bg-base py-12 border-t border-line">
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-2 mb-6">
+      <h2 class="text-[24px] sm:text-[28px] font-bold text-ink-primary">На соответствие чему проверяем</h2>
+      <span class="text-[14px] text-ink-muted">15 актов · 100 проверок</span>
+    </div>
+    <div class="overflow-hidden rounded-card">
+      <div class="marquee-track" id="marquee-track"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Прогресс -->
+<section id="progress-section" aria-live="polite" aria-busy="true" class="hidden max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10">
+  <div class="bg-bg-soft rounded-card overflow-hidden">
+    <!-- Шапка прогресса -->
+    <div class="px-6 sm:px-8 py-6 bg-bg-base border-b border-line rounded-t-card relative">
+      <button onclick="resetScan()" aria-label="Прервать проверку" class="btn-press absolute top-5 right-5 inline-flex items-center gap-1.5 px-3 h-9 rounded-btn text-ink-muted hover:text-ink-primary hover:bg-bg-soft transition text-[13px] cursor-pointer">
+        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        Прервать
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <span class="relative inline-flex w-2.5 h-2.5">
+          <span class="absolute inset-0 rounded-full bg-brand"></span>
+          <span class="pulse-dot relative inline-flex w-2.5 h-2.5"></span>
+        </span>
+        <span class="text-[14px] text-ink-secondary">Проверяем</span>
+        <span id="scan-favicon" class="inline-flex w-5 h-5 rounded items-center justify-center text-white text-[11px] font-bold">E</span>
+        <span class="mono text-[14px] text-ink-primary" id="scan-url">example.ru</span>
+      </div>
+      <div id="current-step-name" class="text-[22px] sm:text-[28px] font-bold text-ink-primary leading-tight">
+        Загружаем главную страницу
+      </div>
+      <div class="mt-2 text-[14px] text-ink-secondary">
+        Шаг <span class="mono text-ink-primary" id="step-index">1</span> из <span class="mono text-ink-primary" id="step-total">8</span>
+        <span class="text-line mx-2">·</span>
+        <span class="mono"><span id="progress-percent">0</span>%</span>
+      </div>
+
+      <div class="mt-5 h-2 w-full rounded-full bg-bg-soft overflow-hidden">
+        <div id="progress-bar" class="progress-bar-fill h-full w-0"></div>
+      </div>
+
+      <!-- Live-уведомление о найденном -->
+      <div id="live-flash" class="mt-3 text-[13px] text-brand font-medium min-h-[20px]"></div>
+    </div>
+
+    <!-- Счётчики severity -->
+    <div class="px-6 sm:px-8 py-6">
+      <div class="text-[14px] text-ink-secondary mb-3">Найдено нарушений</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="rounded-card bg-bg-base p-5">
+          <div class="text-[14px] text-ink-secondary">Критический</div>
+          <div id="count-critical" class="mt-2 text-[32px] font-bold text-sev-crit mono leading-none">0</div>
+        </div>
+        <div class="rounded-card bg-bg-base p-5">
+          <div class="text-[14px] text-ink-secondary">Высокий</div>
+          <div id="count-high" class="mt-2 text-[32px] font-bold text-sev-high mono leading-none">0</div>
+        </div>
+        <div class="rounded-card bg-bg-base p-5">
+          <div class="text-[14px] text-ink-secondary">Средний</div>
+          <div id="count-medium" class="mt-2 text-[32px] font-bold text-sev-med mono leading-none">0</div>
+        </div>
+        <div class="rounded-card bg-bg-base p-5">
+          <div class="text-[14px] text-ink-secondary">Низкий</div>
+          <div id="count-low" class="mt-2 text-[32px] font-bold text-sev-low mono leading-none">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Этапы -->
+    <div class="px-6 sm:px-8 py-6 border-t border-line bg-bg-base rounded-b-card">
+      <div class="text-[14px] text-ink-secondary mb-4">Этапы проверки</div>
+      <ul id="steps-list" class="space-y-2.5"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- Результаты -->
+<section id="results-section" class="hidden">
+  <!-- Sticky шапка отчёта -->
+  <div class="report-bar border-b border-line">
+    <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <span id="report-favicon" class="inline-flex w-8 h-8 rounded items-center justify-center text-white text-[14px] font-bold flex-shrink-0">E</span>
+        <div class="min-w-0">
+          <div class="flex items-baseline gap-2 flex-wrap">
+            <span class="font-bold text-ink-primary mono text-[15px] truncate">example.ru</span>
+            <span class="text-[11px] text-ink-muted mono">№ <span id="audit-number">A7F3-2605</span></span>
+          </div>
+          <div class="text-[12px] text-ink-muted">14 мая 2026, 12:34 · <span id="report-total">6</span> нарушений</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button class="btn-press hidden sm:inline-flex h-9 px-3 rounded-btn border border-line text-ink-primary hover:bg-bg-soft transition items-center gap-1.5 text-[13px] font-medium cursor-pointer" onclick="resetScan()">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          Новая
+        </button>
+        <a href="#download" class="btn-press h-9 px-4 rounded-btn bg-brand text-white hover:bg-brand-hover transition inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer">
+          <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+          PDF
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+    <!-- Правовое уведомление -->
+    <div class="mb-6 rounded-card bg-bg-soft p-5 sm:p-6 flex gap-4">
+      <i data-lucide="info" class="w-5 h-5 text-link mt-0.5 flex-shrink-0"></i>
+      <div class="text-[14px] text-ink-secondary leading-relaxed">
+        <strong class="text-ink-primary font-bold">Ограничение ответственности.</strong>
+        Отчёт сформирован автоматизированным сканером, носит предварительный
+        информационно-справочный характер и не является юридическим заключением. Применимость отдельных
+        норм к конкретному сайту зависит от обстоятельств, которые автоматическая проверка
+        не учитывает в полном объёме (организационно-правовая форма владельца, состав обрабатываемых
+        данных, особенности бизнес-процессов и т. п.). Перед принятием решений на основании отчёта
+        рекомендуется согласовать выводы с практикующим юристом.
+      </div>
+    </div>
+
+    <!-- Сводка -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-7">
+      <div class="rounded-card bg-bg-soft p-5">
+        <div class="text-[14px] text-ink-secondary mb-1">Критический</div>
+        <div id="sum-critical" class="text-[36px] font-bold text-sev-crit mono leading-none">1</div>
+        <div class="text-[13px] text-ink-muted mt-2">требует немедленного внимания</div>
+      </div>
+      <div class="rounded-card bg-bg-soft p-5">
+        <div class="text-[14px] text-ink-secondary mb-1">Высокий</div>
+        <div id="sum-high" class="text-[36px] font-bold text-sev-high mono leading-none">2</div>
+        <div class="text-[13px] text-ink-muted mt-2">серьёзный риск штрафа</div>
+      </div>
+      <div class="rounded-card bg-bg-soft p-5">
+        <div class="text-[14px] text-ink-secondary mb-1">Средний</div>
+        <div id="sum-medium" class="text-[36px] font-bold text-sev-med mono leading-none">2</div>
+        <div class="text-[13px] text-ink-muted mt-2">желательно исправить</div>
+      </div>
+      <div class="rounded-card bg-bg-soft p-5">
+        <div class="text-[14px] text-ink-secondary mb-1">Низкий</div>
+        <div id="sum-low" class="text-[36px] font-bold text-sev-low mono leading-none">1</div>
+        <div class="text-[13px] text-ink-muted mt-2">мелкие замечания</div>
+      </div>
+    </div>
+
+    <!-- Тулбар -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+      <div class="text-[14px] text-ink-secondary">
+        Всего нарушений: <span class="text-ink-primary font-bold mono">6</span>
+        <span class="text-line mx-2">·</span>
+        требуют ручной проверки: <span class="text-ink-primary font-bold mono">1</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn-press text-[14px] px-3 py-1.5 rounded-btn border border-line text-ink-secondary hover:bg-bg-soft transition cursor-pointer" onclick="toggleAll(false)">Свернуть все</button>
+        <button class="btn-press text-[14px] px-3 py-1.5 rounded-btn border border-line text-ink-secondary hover:bg-bg-soft transition cursor-pointer" onclick="toggleAll(true)">Раскрыть все</button>
+      </div>
+    </div>
+
+    <h3 class="text-[20px] font-bold text-ink-primary mb-3">Нарушения</h3>
+    <div id="findings-list" class="space-y-3 mb-10"></div>
+
+    <h3 class="text-[20px] font-bold text-ink-primary mb-3">Требуют ручной проверки</h3>
+    <div class="space-y-3 mb-10">
+      <div class="bg-bg-soft border border-line rounded-card p-5 sm:p-6 sev-stripe" style="--stripe:#666666;">
+        <div class="flex items-center gap-2 flex-wrap mb-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-bold bg-sev-incSoft text-sev-inc border border-sev-incBorder">
+            Не проверено
+          </span>
+          <span class="text-[14px] text-ink-secondary">Политика конфиденциальности</span>
+        </div>
+        <div class="text-[14px] text-ink-secondary leading-relaxed">
+          Автоматический анализ текста временно недоступен. Рекомендуем сверить вручную:
+          перечислены ли цели обработки персональных данных, указано ли правовое основание
+          (согласие, договор, закон), срок хранения и порядок отзыва согласия.
+        </div>
+      </div>
+    </div>
+
+    <!-- Финальный CTA -->
+    <div id="download" class="relative rounded-card p-8 sm:p-12 text-white text-center overflow-hidden dot-pattern" style="background-color: #26AD50;">
+      <svg class="absolute -right-16 -top-16 opacity-15 hidden sm:block" width="240" height="240" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+        <path d="M120 20L40 50V110C40 160 75 200 120 215C165 200 200 160 200 110V50L120 20Z" stroke="white" stroke-width="2.5"/>
+        <path d="M80 120L105 145L165 85" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="relative">
+        <h3 class="text-[26px] sm:text-[32px] font-bold mb-3">Готовы скачать отчёт?</h3>
+        <p class="text-white/90 mb-7 max-w-[560px] mx-auto leading-relaxed text-[16px]">
+          Все нарушения, статьи закона, суммы штрафов и рекомендации — в одном PDF.
+          Удобно показать руководству, клиенту или сохранить как материал к согласованию с юристом.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button class="btn-press h-12 px-7 rounded-btn bg-ink-primary text-white hover:bg-black transition inline-flex items-center gap-2 text-[16px] font-bold cursor-pointer">
+            <i data-lucide="file-down" class="w-4 h-4"></i>
+            Скачать PDF
+          </button>
+          <button class="btn-press h-12 px-5 rounded-btn bg-white/15 text-white border border-white/30 hover:bg-white/25 transition inline-flex items-center gap-2 text-[15px] font-medium cursor-pointer" onclick="resetScan()">
+            Проверить другой сайт
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="border-t border-line bg-bg-base mt-12">
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row justify-between gap-4">
+    <div class="max-w-[680px] text-[13px] text-ink-muted leading-relaxed">
+      Отчёт носит информационно-справочный характер и не заменяет юридическое заключение.
+      Для принятия решений на основании отчёта согласуйте выводы с практикующим юристом.
+      Результаты проверок не сохраняются.
+    </div>
+    <div class="text-[13px] text-ink-muted sm:text-right">
+      <div class="inline-flex items-center gap-2 mb-1">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M16 2.5L4.5 6.5V15.5C4.5 22.4 9.4 28.1 16 30C22.6 28.1 27.5 22.4 27.5 15.5V6.5L16 2.5Z" fill="#26AD50"/>
+          <path d="M10.5 16.2L14.2 19.9L21.5 12.6" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="font-bold text-ink-primary text-[15px]">Legal Site</span>
+      </div>
+      <div>превью дизайна · итерация 5</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ============== ЗАКОНЫ ==============
+  const LAWS = [
+    { title: '152-ФЗ',             desc: 'О персональных данных',                  icon: 'lock',         checks: 9, cat: 'ПДн' },
+    { title: '242-ФЗ',             desc: 'Локализация ПДн в РФ',                   icon: 'map-pin',      checks: 5, cat: 'ПДн' },
+    { title: 'ПП РФ № 1119',       desc: 'Требования к защите ПДн',                icon: 'shield-check', checks: 5, cat: 'ПДн' },
+    { title: '149-ФЗ',             desc: 'Об информации, ИТ и защите информации',  icon: 'globe',        checks: 8, cat: 'Информация' },
+    { title: 'ЗоЗПП 2300-1',       desc: 'О защите прав потребителей',             icon: 'users',        checks: 8, cat: 'Потребители' },
+    { title: '38-ФЗ',              desc: 'О рекламе',                              icon: 'megaphone',    checks: 7, cat: 'Реклама' },
+    { title: 'Маркировка',         desc: 'Интернет-реклама: erid и пометки',       icon: 'tag',          checks: 6, cat: 'Реклама' },
+    { title: '436-ФЗ',             desc: 'Защита детей от информации',             icon: 'baby',         checks: 6, cat: 'Дети' },
+    { title: '53-ФЗ',              desc: 'О государственном языке',                icon: 'languages',    checks: 6, cat: 'Язык' },
+    { title: 'ГК РФ, ч. IV',       desc: 'Авторское право и товарные знаки',       icon: 'copyright',    checks: 8, cat: 'ИС' },
+    { title: 'ПП РФ № 2463',       desc: 'Правила продажи товаров',                icon: 'shopping-cart',checks: 7, cat: 'E-com' },
+    { title: '54-ФЗ',              desc: 'О применении ККТ',                       icon: 'receipt',      checks: 6, cat: 'E-com' },
+    { title: '161-ФЗ',             desc: 'Национальная платёжная система',         icon: 'credit-card',  checks: 7, cat: 'E-com' },
+    { title: '63-ФЗ',              desc: 'Об электронной подписи',                 icon: 'pen-tool',     checks: 7, cat: 'E-com' },
+    { title: 'ГК РФ, ст. 435–443', desc: 'Публичная оферта и акцепт',              icon: 'file-check',   checks: 5, cat: 'E-com' },
+    { title: 'КоАП РФ',            desc: '21 статья: штрафы и составы',            icon: 'scale',        checks: '—', cat: 'Штрафы' },
+  ];
+
+  function renderMarquee() {
+    const track = document.getElementById('marquee-track');
+    if (!track) return;
+    const html = [...LAWS, ...LAWS].map(l => `
+      <article class="law-card w-[260px] sm:w-[280px] flex-shrink-0 p-5 flex flex-col">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="law-icon w-10 h-10 rounded-full bg-white inline-flex items-center justify-center flex-shrink-0 text-brand">
+            <i data-lucide="${l.icon}" class="w-4 h-4"></i>
+          </div>
+          <span class="text-[10px] uppercase tracking-wider text-ink-muted font-medium">${l.cat}</span>
+        </div>
+        <div class="text-[15px] font-bold text-ink-primary truncate">${l.title}</div>
+        <div class="text-[13px] text-ink-secondary mt-0.5 leading-snug">${l.desc}</div>
+        <div class="mt-auto pt-4 border-t border-line text-[12px] text-ink-muted mono">
+          ${typeof l.checks === 'number' ? l.checks + ' проверок' : 'обзор статей'}
+        </div>
+      </article>
+    `).join('');
+    track.innerHTML = html;
+  }
+
+  // ============== ШАГИ И НАРУШЕНИЯ ==============
+  const STEPS = [
+    { name: 'Загружаем главную страницу',        findings: [] },
+    { name: 'Ищем политику конфиденциальности',  findings: ['policy'] },
+    { name: 'Проверяем формы сбора ПДн',         findings: ['consent'] },
+    { name: 'Проверяем обязательные сведения',   findings: ['seller'] },
+    { name: 'Анализируем cookie и трекеры',      findings: ['cookies', 'low_dnt'] },
+    { name: 'Проверяем рекламные блоки',         findings: ['ad_marking'] },
+    { name: 'Семантические проверки текстов',    findings: [] },
+    { name: 'Финализируем отчёт',                findings: [] },
+  ];
+
+  const FINDINGS = {
+    policy: {
+      severity: 'critical',
+      law: '152-ФЗ, ст. 18.1',
+      title: 'Политика обработки персональных данных не найдена',
+      description: 'На сайте отсутствует общедоступный документ, описывающий политику обработки персональных данных. Это обязательное требование для любого ресурса, собирающего данные посетителей.',
+      where: 'футер и шапка всех проверенных страниц',
+      preview: 'footer_no_policy',
+      fine: 'для юридических лиц — до 60 000 ₽ (КоАП, ст. 13.11 ч. 1)',
+      fix: 'Разместить документ «Политика обработки персональных данных», добавить активную ссылку в футер всех страниц сайта.',
+    },
+    consent: {
+      severity: 'high',
+      law: '152-ФЗ, ст. 9',
+      title: 'Согласие на обработку персональных данных не получено',
+      description: 'Форма обратной связи отправляет персональные данные без чекбокса согласия и без ссылки на политику обработки.',
+      where: 'форма обратной связи на главной странице',
+      preview: 'form_no_consent',
+      fine: 'для юридических лиц — до 700 000 ₽ (КоАП, ст. 13.11 ч. 2)',
+      fix: 'Добавить чекбокс согласия с ссылкой на политику обработки. Кнопка отправки заблокирована, пока чекбокс не отмечен.',
+    },
+    cookies: {
+      severity: 'high',
+      law: '152-ФЗ + Постановление 1119',
+      title: 'Cookie устанавливаются до получения согласия',
+      description: 'Сторонние cookie (Яндекс.Метрика, Google Analytics) устанавливаются при первой загрузке страницы — до того, как пользователь принял условия в cookie-баннере.',
+      where: 'cookies, установленные при загрузке главной страницы',
+      preview: 'cookies_before_consent',
+      fine: 'для юридических лиц — до 100 000 ₽ (КоАП, ст. 13.11 ч. 1)',
+      fix: 'Загружать счётчики и трекинговые скрипты только после явного согласия пользователя в cookie-баннере.',
+    },
+    seller: {
+      severity: 'medium',
+      law: 'Закон о защите прав потребителей, ст. 9',
+      title: 'Не указаны обязательные сведения о продавце',
+      description: 'На сайте интернет-магазина отсутствуют ИНН/ОГРН, юридический адрес и режим работы продавца.',
+      where: 'страницы «О компании», «Контакты», футер',
+      preview: 'contacts_no_requisites',
+      fine: 'для юридических лиц — до 50 000 ₽ (КоАП, ст. 14.8)',
+      fix: 'Разместить полные реквизиты продавца на странице «Контакты» и в футере: наименование, ИНН, ОГРН, юридический адрес, режим работы.',
+    },
+    ad_marking: {
+      severity: 'medium',
+      law: 'Закон «О рекламе», ст. 18.1',
+      title: 'Реклама не промаркирована',
+      description: 'Рекламные баннеры на главной странице не содержат пометки «Реклама» и идентификатора рекламной кампании (erid).',
+      where: 'рекламные блоки на главной странице',
+      preview: 'banner_no_marking',
+      fine: 'для юридических лиц — до 500 000 ₽ (КоАП, ст. 14.3 ч. 1)',
+      fix: 'Добавить пометку «Реклама» и идентификатор erid в видимой части каждого рекламного блока.',
+    },
+    low_dnt: {
+      severity: 'low',
+      law: 'Рекомендация (вне обязательных норм РФ)',
+      title: 'Не учитывается заголовок Do Not Track',
+      description: 'Сервер не реагирует на заголовок DNT=1 в запросах пользователя. Не является нарушением законодательства РФ, но снижает уровень доверия и расходится с практикой ведущих площадок.',
+      where: 'обработка HTTP-заголовков пользователя',
+      preview: 'dnt_ignored',
+      fine: 'не применяется',
+      fix: 'При DNT=1 не загружать аналитические скрипты и не устанавливать трекинговые cookie.',
+    },
+  };
+
+  // ============== «СКРИНШОТЫ» ==============
+  const PREVIEWS = {
+    footer_no_policy: () => `
+      <div class="rounded-card bg-bg-base border border-line p-4">
+        <div class="text-xs text-ink-muted mb-3">Футер сайта</div>
+        <div class="border-t border-line pt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-ink-secondary">
+          <div>© 2026, ООО «Пример»</div>
+          <div>Контакты</div>
+          <div>Доставка</div>
+          <div>О компании</div>
+        </div>
+        <div class="mt-3 px-3 py-2 rounded border-l-2 border-sev-crit bg-sev-critSoft text-xs text-sev-crit">
+          Не найдена ссылка «Политика обработки персональных данных»
+        </div>
+      </div>`,
+
+    form_no_consent: () => `
+      <div class="rounded-card bg-bg-base border border-line p-4 max-w-md">
+        <div class="text-xs text-ink-muted mb-3">Форма обратной связи · главная</div>
+        <div class="text-sm font-bold text-ink-primary mb-3">Свяжитесь с нами</div>
+        <div class="space-y-2">
+          <div class="h-8 rounded border border-line bg-bg-soft flex items-center px-2 text-xs text-ink-muted">Имя</div>
+          <div class="h-8 rounded border border-line bg-bg-soft flex items-center px-2 text-xs text-ink-muted">Email</div>
+          <div class="h-8 rounded border border-line bg-bg-soft flex items-center px-2 text-xs text-ink-muted">Телефон</div>
+          <div class="h-14 rounded border border-line bg-bg-soft flex items-start px-2 pt-2 text-xs text-ink-muted">Сообщение</div>
+          <div class="px-3 py-2 rounded border-l-2 border-sev-high bg-sev-highSoft text-xs text-sev-high">
+            Здесь должен быть чекбокс согласия на обработку ПДн со ссылкой на политику
+          </div>
+          <button class="h-8 px-3 rounded bg-brand text-white text-xs font-bold">Отправить</button>
+        </div>
+      </div>`,
+
+    cookies_before_consent: () => `
+      <div class="rounded-card bg-bg-base border border-line p-4">
+        <div class="text-xs text-ink-muted mb-3">Cookie, установленные при загрузке главной</div>
+        <ul class="space-y-1.5 text-xs">
+          <li class="flex items-center gap-2 flex-wrap">
+            <span class="px-1.5 py-0.5 rounded bg-sev-highSoft text-sev-high font-bold border border-sev-highBorder">установлено до согласия</span>
+            <span class="mono text-ink-secondary">_ym_uid=171425…</span>
+            <span class="text-ink-muted">· Яндекс.Метрика</span>
+          </li>
+          <li class="flex items-center gap-2 flex-wrap">
+            <span class="px-1.5 py-0.5 rounded bg-sev-highSoft text-sev-high font-bold border border-sev-highBorder">установлено до согласия</span>
+            <span class="mono text-ink-secondary">_ga=GA1.2.123…</span>
+            <span class="text-ink-muted">· Google Analytics</span>
+          </li>
+          <li class="flex items-center gap-2 flex-wrap">
+            <span class="px-1.5 py-0.5 rounded bg-bg-soft text-ink-secondary font-medium">служебная</span>
+            <span class="mono text-ink-secondary">session_id=…</span>
+          </li>
+        </ul>
+        <div class="mt-3 border-t border-line pt-2 text-xs text-ink-muted">
+          Баннер «Принять cookie» появился через 1.8 с после первой установки.
+        </div>
+      </div>`,
+
+    contacts_no_requisites: () => `
+      <div class="rounded-card bg-bg-base border border-line p-4">
+        <div class="text-xs text-ink-muted mb-3">Страница «Контакты»</div>
+        <div class="space-y-1.5 text-sm">
+          <div class="text-ink-primary font-bold">ООО «Пример»</div>
+          <div class="text-ink-secondary text-xs mono">+7 (495) 123-45-67</div>
+          <div class="text-ink-secondary text-xs">info@example.ru</div>
+          <div class="text-ink-secondary text-xs">г. Москва, ул. Примерная, д. 1</div>
+        </div>
+        <div class="mt-3 px-3 py-2 rounded border-l-2 border-sev-med bg-sev-medSoft text-xs text-sev-med">
+          Не найдено: ИНН, ОГРН, юридический адрес, режим работы
+        </div>
+      </div>`,
+
+    banner_no_marking: () => `
+      <div class="rounded-card bg-bg-base border border-line p-4">
+        <div class="text-xs text-ink-muted mb-3">Рекламный блок · главная</div>
+        <div class="rounded bg-bg-soft border border-line p-4">
+          <div class="text-sm font-bold text-ink-primary mb-1">Новый кешбэк до 30%</div>
+          <div class="text-xs text-ink-secondary">Подключите карту партнёра и получите повышенный кешбэк на все покупки.</div>
+          <button class="mt-3 h-7 px-3 rounded bg-brand text-white text-xs font-bold">Подключить</button>
+        </div>
+        <div class="mt-3 px-3 py-2 rounded border-l-2 border-sev-med bg-sev-medSoft text-xs text-sev-med">
+          На баннере отсутствует пометка «Реклама» и идентификатор erid
+        </div>
+      </div>`,
+
+    dnt_ignored: () => `
+      <div class="rounded-card bg-bg-base border border-line p-4">
+        <div class="text-xs text-ink-muted mb-3">Запрос пользователя</div>
+        <div class="mono text-xs text-ink-secondary space-y-1 bg-bg-soft rounded p-3 border border-line">
+          <div><span class="text-brand font-bold">GET</span> / HTTP/1.1</div>
+          <div>Host: example.ru</div>
+          <div class="text-sev-low font-bold">DNT: 1</div>
+          <div class="text-ink-muted">…</div>
+        </div>
+        <div class="mt-3 text-xs text-ink-secondary">
+          Несмотря на заголовок <span class="mono">DNT: 1</span>, страница загружает счётчики
+          <span class="mono">_ga</span>, <span class="mono">_ym_uid</span>.
+        </div>
+      </div>`,
+  };
+
+  // ============== СОСТОЯНИЕ ==============
+  let scanInProgress = false;
+  let counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  let auditNumber = '';
+
+  function refreshIcons() { if (window.lucide) lucide.createIcons(); }
+
+  // ============== УТИЛИТЫ ==============
+
+  // Цвет иконки-favicon по хешу домена
+  function colorFromHost(host) {
+    const palette = ['#2563EB', '#7C3AED', '#DB2777', '#DC2626', '#EA580C', '#CA8A04', '#16A34A', '#0891B2', '#4F46E5'];
+    let h = 0;
+    for (let i = 0; i < host.length; i++) h = (h * 31 + host.charCodeAt(i)) >>> 0;
+    return palette[h % palette.length];
+  }
+
+  function setFavicon(elId, host) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const cleanHost = host.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    const letter = (cleanHost[0] || 'X').toUpperCase();
+    el.textContent = letter;
+    el.style.backgroundColor = colorFromHost(cleanHost);
+  }
+
+  // Случайный «номер аудита»
+  function generateAuditNumber() {
+    const hex = () => Math.floor(Math.random() * 16).toString(16).toUpperCase();
+    return `${hex()}${hex()}${hex()}${hex()}-${new Date().getMonth() + 1}${String(new Date().getDate()).padStart(2, '0')}`;
+  }
+
+  // ============== СТАРТ СКАНА ==============
+  async function startScan() {
+    if (scanInProgress) return;
+    scanInProgress = true;
+    const url = (document.getElementById('url-input').value || 'example.ru').trim();
+    document.getElementById('scan-url').textContent = url;
+    setFavicon('scan-favicon', url);
+    setFavicon('report-favicon', url);
+    auditNumber = generateAuditNumber();
+    document.getElementById('audit-number').textContent = auditNumber;
+
+    counts = { critical: 0, high: 0, medium: 0, low: 0 };
+
+    document.getElementById('hero').classList.add('hidden');
+    document.getElementById('cta-search').classList.add('hidden');
+    document.getElementById('how-it-works').classList.add('hidden');
+    document.getElementById('laws-marquee').classList.add('hidden');
+    document.getElementById('results-section').classList.add('hidden');
+    const progress = document.getElementById('progress-section');
+    progress.classList.remove('hidden');
+    progress.setAttribute('aria-busy', 'true');
+    progress.classList.add('rise-lg');
+
+    const stepsList = document.getElementById('steps-list');
+    stepsList.innerHTML = '';
+    document.getElementById('step-total').textContent = STEPS.length;
+    document.getElementById('live-flash').innerHTML = '';
+
+    STEPS.forEach((s, i) => {
+      const li = document.createElement('li');
+      li.id = `step-${i}`;
+      li.className = 'flex items-center gap-3 text-[14px] text-ink-muted rise';
+      li.style.animationDelay = `${i * 40}ms`;
+      li.innerHTML = `
+        <span class="step-icon w-5 h-5 inline-flex items-center justify-center flex-shrink-0">
+          <i data-lucide="circle" class="w-3 h-3 text-ink-faint"></i>
+        </span>
+        <span class="step-name">${s.name}</span>
+      `;
+      stepsList.appendChild(li);
+    });
+    refreshIcons();
+
+    progress.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    for (let i = 0; i < STEPS.length; i++) {
+      if (!scanInProgress) return;
+      await setActiveStep(i);
+      await sleep(1300 + Math.random() * 400);
+      if (!scanInProgress) return;
+      for (const key of STEPS[i].findings) {
+        bumpCount(FINDINGS[key].severity);
+        flashFinding(FINDINGS[key].title);
+        await sleep(280);
+      }
+      await completeStep(i);
+    }
+
+    await sleep(500);
+    showResults();
+    scanInProgress = false;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function setActiveStep(i) {
+    const li = document.getElementById(`step-${i}`);
+    li.classList.remove('text-ink-muted');
+    li.classList.add('text-ink-primary', 'font-medium');
+    li.querySelector('.step-icon').innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 text-brand spin"></i>`;
+    refreshIcons();
+    document.getElementById('current-step-name').textContent = STEPS[i].name;
+    document.getElementById('step-index').textContent = i + 1;
+    const pct = Math.round(((i + 0.4) / STEPS.length) * 100);
+    setProgress(pct);
+  }
+
+  async function completeStep(i) {
+    const li = document.getElementById(`step-${i}`);
+    li.querySelector('.step-icon').innerHTML = `<i data-lucide="check" class="w-4 h-4 text-brand"></i>`;
+    li.classList.remove('font-medium');
+    refreshIcons();
+    const pct = Math.round(((i + 1) / STEPS.length) * 100);
+    setProgress(pct);
+  }
+
+  function setProgress(pct) {
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-percent').textContent = pct;
+  }
+
+  function bumpCount(severity) {
+    counts[severity] = (counts[severity] || 0) + 1;
+    const el = document.getElementById('count-' + severity);
+    if (!el) return;
+    el.textContent = counts[severity];
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+
+  function flashFinding(title) {
+    const flash = document.getElementById('live-flash');
+    if (!flash) return;
+    const span = document.createElement('span');
+    span.className = 'inline-flex items-center gap-1.5 flash-in';
+    span.innerHTML = `<i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>Только что: ${title}`;
+    flash.innerHTML = '';
+    flash.appendChild(span);
+    refreshIcons();
+  }
+
+  // ============== РЕЗУЛЬТАТЫ ==============
+  function showResults() {
+    document.getElementById('progress-section').setAttribute('aria-busy', 'false');
+    const total = counts.critical + counts.high + counts.medium + counts.low;
+    document.getElementById('report-total').textContent = total;
+    document.getElementById('sum-critical').textContent = counts.critical;
+    document.getElementById('sum-high').textContent = counts.high;
+    document.getElementById('sum-medium').textContent = counts.medium;
+    document.getElementById('sum-low').textContent = counts.low;
+
+    const list = document.getElementById('findings-list');
+    list.innerHTML = '';
+
+    const order = ['critical', 'high', 'medium', 'low'];
+    const all = [];
+    for (const step of STEPS) {
+      for (const key of step.findings) all.push(FINDINGS[key]);
+    }
+    all.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+
+    all.forEach((f, idx) => {
+      const card = document.createElement('article');
+      card.className = 'finding bg-bg-soft border border-line rounded-card overflow-hidden rise sev-stripe';
+      card.style.setProperty('--stripe', severityColor(f.severity));
+      card.style.animationDelay = `${idx * 40}ms`;
+      card.innerHTML = renderFinding(f);
+      list.appendChild(card);
+    });
+
+    refreshIcons();
+
+    const results = document.getElementById('results-section');
+    results.classList.remove('hidden');
+    results.classList.add('rise-lg');
+    setTimeout(() => results.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }
+
+  function severityColor(sev) {
+    return { critical: '#C73C3C', high: '#D87A1A', medium: '#C99A1F', low: '#3E7FBF' }[sev];
+  }
+
+  function severityChip(sev) {
+    const map = {
+      critical: { label: 'Критический', text: 'text-sev-crit', bg: 'bg-sev-critSoft', border: 'border-sev-critBorder' },
+      high:     { label: 'Высокий',     text: 'text-sev-high', bg: 'bg-sev-highSoft', border: 'border-sev-highBorder' },
+      medium:   { label: 'Средний',     text: 'text-sev-med',  bg: 'bg-sev-medSoft',  border: 'border-sev-medBorder' },
+      low:      { label: 'Низкий',      text: 'text-sev-low',  bg: 'bg-sev-lowSoft',  border: 'border-sev-lowBorder' },
+    };
+    const c = map[sev];
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[12px] font-bold ${c.bg} ${c.text} border ${c.border}">${c.label}</span>`;
+  }
+
+  function renderFinding(f) {
+    const preview = (PREVIEWS[f.preview] && PREVIEWS[f.preview]()) || '';
+    return `
+      <header class="px-5 sm:px-6 py-4 flex items-start gap-3 cursor-pointer select-none hover:bg-bg-gray/40 transition" onclick="toggleFinding(this.parentElement)">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-1.5">
+            ${severityChip(f.severity)}
+            <span class="text-[12px] text-ink-secondary mono">${f.law}</span>
+          </div>
+          <h4 class="font-bold text-ink-primary text-[17px] leading-snug">${f.title}</h4>
+        </div>
+        <i data-lucide="chevron-down" class="chevron w-5 h-5 text-ink-muted flex-shrink-0 mt-1"></i>
+      </header>
+      <div class="finding-body" style="max-height: 1500px;">
+        <div class="px-5 sm:px-6 pb-5 sm:pb-6 pt-5 border-t border-line space-y-5">
+          <p class="text-[15px] text-ink-secondary leading-relaxed">${f.description}</p>
+
+          <div>
+            <div class="text-[12px] text-ink-muted mb-2 uppercase tracking-wider font-medium">Где найдено</div>
+            <div class="text-[14px] text-ink-primary mb-2">${f.where}</div>
+            ${preview}
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-5 pt-4 border-t border-line">
+            <div>
+              <div class="text-[12px] text-ink-muted mb-1.5 uppercase tracking-wider font-medium">Штраф</div>
+              <div class="text-[14px] text-ink-primary">${f.fine}</div>
+            </div>
+            <div>
+              <div class="text-[12px] text-ink-muted mb-1.5 uppercase tracking-wider font-medium">Как исправить</div>
+              <div class="text-[14px] text-ink-primary">${f.fix}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function toggleFinding(card) {
+    card.classList.toggle('finding-collapsed');
+    refreshIcons();
+  }
+
+  function toggleAll(open) {
+    document.querySelectorAll('.finding').forEach(c => {
+      if (open) c.classList.remove('finding-collapsed');
+      else c.classList.add('finding-collapsed');
+    });
+  }
+
+  function resetScan() {
+    scanInProgress = false;
+    document.getElementById('progress-section').classList.add('hidden');
+    document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('hero').classList.remove('hidden');
+    document.getElementById('cta-search').classList.remove('hidden');
+    document.getElementById('how-it-works').classList.remove('hidden');
+    document.getElementById('laws-marquee').classList.remove('hidden');
+    setProgress(0);
+    counts = { critical: 0, high: 0, medium: 0, low: 0 };
+    ['critical','high','medium','low'].forEach(s => {
+      const el = document.getElementById('count-' + s);
+      if (el) el.textContent = '0';
+    });
+    document.getElementById('live-flash').innerHTML = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderMarquee();
+    setFavicon('scan-favicon', 'example.ru');
+    setFavicon('report-favicon', 'example.ru');
+    refreshIcons();
+  });
+</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" onload="refreshIcons()"></script>
+</body>
+</html>

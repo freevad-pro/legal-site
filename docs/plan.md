@@ -69,7 +69,7 @@
 | 2 | Каркас приложения и инструментарий | Рабочая разработческая среда: FastAPI отвечает, `make` команды работают | ✅ Done | [iteration-02-skeleton.md](tasks/iteration-02-skeleton.md) |
 | 3 | Детерминированный движок (CLI-MVP) | На любой URL получаем JSON Finding'ов по детерминированным правилам | ✅ Done | [iteration-03-deterministic-engine.md](tasks/iteration-03-deterministic-engine.md) |
 | 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | ✅ Done | [iteration-04-api.md](tasks/iteration-04-api.md) |
-| 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | 📋 Planned | [iteration-05-design.md](tasks/iteration-05-design.md) |
+| 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | ✅ Done | [iteration-05-design.md](tasks/iteration-05-design.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | 📋 Planned | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
 | 8 | Production-деплой на Beget VPS | Приложение поднято на VPS под HTTPS | 📋 Planned | [iteration-08-deploy.md](tasks/iteration-08-deploy.md) |
@@ -225,7 +225,18 @@
 
 **Цель:** реализовать пользовательский UI поверх готового API по утверждённому в итерации 5 дизайну — полный сценарий «ввёл URL → увидел прогресс → получил отчёт → скачал PDF» работает в браузере.
 
-**Стартовый контекст:** утверждённый `docs/design.md` (или `docs/adr/0002-ui-design.md`) из итерации 5; [vision.md](vision.md) — разделы «Сценарии работы пользователя» (поведение раскрытых карточек, нормализация URL, нестандартные ситуации), «Структура репозитория» (раскладка `frontend/`), «Технологии» → Frontend (Next.js + Tailwind, static export).
+**Стартовый контекст:** утверждённый [docs/design.md](design.md) и живой прототип [docs/design/preview.html](design/preview.html) из итерации 5; [vision.md](vision.md) — разделы «Сценарии работы пользователя» (поведение раскрытых карточек, нормализация URL, нестандартные ситуации), «Структура репозитория» (раскладка `frontend/`), «Технологии» → Frontend (Next.js + Tailwind, static export).
+
+**Предусловия (унаследованы из итерации 5 — см. [docs/design.md § 15](design.md)):**
+
+Перед стартом вёрстки фронта необходимо закрыть **две data/architecture-задачи**, без которых UI будет работать на хардкоде:
+
+- **ADR-0002 — расширение схемы корпуса** ([docs/laws/schema.md](laws/schema.md) + 15 YAML-файлов корпуса + пересборка `docs/laws/index.yml`):
+  - На уровне закона: `short_description`, `icon` (Lucide-имя), `category` (одна из `privacy` / `cookies` / `advertising` / `consumer` / `info` / `copyright`).
+  - На уровне `violations[]`: `evidence_template` — имя шаблона мини-превью.
+- **`CorpusBundle.for_categories` — категоризация для шагов прогресса.** Решить: бэк публикует `step`-события (правка [app/engine.py](../app/engine.py) и [app/events.py](../app/events.py)) или UI группирует `violation_evaluated` на лету по полю `category`. От этого зависит контракт SSE-стрима.
+
+Эти два пункта должны быть первыми в tasklist'е итерации 6.
 
 **Критерии завершения (DoD):**
 - Скелет `frontend/`: Next.js 15 + Tailwind, `output: 'export'` в `next.config.mjs`, `pnpm build` собирается в `frontend/out/`
