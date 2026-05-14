@@ -5,5 +5,6 @@ out/
 .env.production.local
 *.log
 .DS_Store
+*.tsbuildinfo
 src/data/laws.generated.ts
 src/data/categories.generated.ts
