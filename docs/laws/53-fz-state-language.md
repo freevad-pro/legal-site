@@ -11,6 +11,10 @@ last_amended: 2025-06-24
 
 status: in_force
 
+category: info
+icon: languages
+short_description: "Государственный язык"
+
 official_sources:
   - title: "pravo.gov.ru — 53-ФЗ (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102093001

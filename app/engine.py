@@ -41,6 +41,7 @@ class Finding(BaseModel):
     explanation: str | None = None
     recommendation: str
     penalties: tuple[Penalty, ...] = ()
+    evidence_template: str | None = None
 
 
 class ScanResult(BaseModel):
@@ -65,6 +66,7 @@ def _violation_to_finding(law_id: str, violation: Violation, aggregated: CheckRe
         explanation=aggregated.explanation,
         recommendation=violation.recommendation,
         penalties=violation.penalties,
+        evidence_template=violation.evidence_template,
     )
 
 
@@ -134,6 +136,7 @@ async def run_scan(
                 payload={
                     "violation_id": finding.violation_id,
                     "law_id": finding.law_id,
+                    "title": finding.title,
                     "status": finding.status,
                     "severity": finding.severity,
                 },

@@ -11,6 +11,10 @@ last_amended: 2025-04-01
 
 status: in_force
 
+category: advertising
+icon: tag
+short_description: "Маркировка интернет-рекламы"
+
 official_sources:
   - title: "pravo.gov.ru — 347-ФЗ от 02.07.2021"
     url: http://publication.pravo.gov.ru/Document/View/0001202107020059
@@ -205,6 +209,8 @@ violations:
     references:
       - "https://rkn.gov.ru/ads/"
       - "https://erir.grfc.ru/"
+
+    evidence_template: banner_no_marking
 
   - id: ord-ad-no-advertiser-info
     article: "ст. 18.1 ч. 3 п. 2 38-ФЗ"

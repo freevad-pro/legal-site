@@ -11,6 +11,10 @@ last_amended: 2025-06-24
 
 status: in_force
 
+category: privacy
+icon: lock
+short_description: "О персональных данных"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102108261
@@ -137,6 +141,8 @@ violations:
       - "https://www.consultant.ru/document/cons_doc_LAW_61801/"
       - "https://www.garant.ru/article/1862510/"
 
+    evidence_template: form_no_consent
+
   - id: 152-fz-no-privacy-policy
     article: "152-ФЗ, ст. 18.1 ч. 2"
     title: "Отсутствие на сайте политики в отношении обработки персональных данных"
@@ -208,6 +214,8 @@ violations:
     references:
       - "https://www.consultant.ru/document/cons_doc_LAW_61801/eeeebe22bf738fd65bb66b95cc278911ae2525ee/"
       - "https://rkn.gov.ru/personal-data/"
+
+    evidence_template: footer_no_policy
 
   - id: 152-fz-policy-incomplete
     article: "152-ФЗ, ст. 18.1 ч. 2; ст. 14 ч. 7"
@@ -660,6 +668,8 @@ violations:
 
     references:
       - "https://rkn.gov.ru/personal-data/"
+
+    evidence_template: cookies_before_consent
 ---
 
 # Федеральный закон от 27.07.2006 № 152-ФЗ «О персональных данных»

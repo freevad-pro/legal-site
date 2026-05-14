@@ -11,6 +11,10 @@ last_amended: 2014-12-31
 
 status: in_force
 
+category: privacy
+icon: database
+short_description: "Локализация данных в РФ"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная публикация)"
     url: http://publication.pravo.gov.ru/Document/View/0001201407220042

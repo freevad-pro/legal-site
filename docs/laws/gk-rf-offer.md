@@ -11,6 +11,10 @@ last_amended: 2015-06-01
 
 status: in_force
 
+category: consumer
+icon: scroll
+short_description: "Публичная оферта (ГК РФ)"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации — ГК РФ часть I"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102033239

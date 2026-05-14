@@ -11,6 +11,10 @@ last_amended: 2012-11-01
 
 status: in_force
 
+category: privacy
+icon: shield-check
+short_description: "Уровни защищённости ПДн"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102160631

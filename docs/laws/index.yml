@@ -8,6 +8,17 @@ generator: tools/rebuild_index.py
 total_laws: 15
 total_common_compendiums: 3
 total_violations: 100
+categories:
+- category: advertising
+  violations_count: 13
+- category: consumer
+  violations_count: 33
+- category: copyright
+  violations_count: 8
+- category: info
+  violations_count: 27
+- category: privacy
+  violations_count: 19
 laws:
 - id: 149-fz
   file: 149-fz-information.md
@@ -15,6 +26,9 @@ laws:
   title: Федеральный закон от 27.07.2006 № 149-ФЗ «Об информации, информационных технологиях и о защите информации»
   type: federal_law
   status: in_force
+  category: info
+  icon: file-text
+  short_description: Об информации и ИТ
   in_force_since: 2007-02-09
   last_amended: 2025-12-29
   applies_to:
@@ -40,6 +54,9 @@ laws:
   title: Федеральный закон от 27.07.2006 № 152-ФЗ «О персональных данных»
   type: federal_law
   status: in_force
+  category: privacy
+  icon: lock
+  short_description: О персональных данных
   in_force_since: 2007-01-26
   last_amended: 2025-06-24
   applies_to:
@@ -66,6 +83,9 @@ laws:
   title: Федеральный закон от 27.06.2011 № 161-ФЗ «О национальной платёжной системе»
   type: federal_law
   status: in_force
+  category: consumer
+  icon: credit-card
+  short_description: Национальная платёжная система
   in_force_since: 2011-09-29
   last_amended: 2025-07-23
   applies_to:
@@ -94,6 +114,9 @@ laws:
   title: Закон РФ от 07.02.1992 № 2300-1 «О защите прав потребителей»
   type: rf_law
   status: in_force
+  category: consumer
+  icon: users
+  short_description: Защита прав потребителей
   in_force_since: 1992-04-07
   last_amended: 2025-12-28
   applies_to:
@@ -121,6 +144,9 @@ laws:
     в части уточнения порядка обработки персональных данных в информационно-телекоммуникационных сетях»
   type: federal_law
   status: in_force
+  category: privacy
+  icon: database
+  short_description: Локализация данных в РФ
   in_force_since: 2015-09-01
   last_amended: 2014-12-31
   applies_to:
@@ -142,6 +168,9 @@ laws:
   title: Федеральный закон от 13.03.2006 № 38-ФЗ «О рекламе»
   type: federal_law
   status: in_force
+  category: advertising
+  icon: megaphone
+  short_description: О рекламе
   in_force_since: 2006-07-01
   last_amended: 2025-10-27
   applies_to:
@@ -167,6 +196,9 @@ laws:
   title: Федеральный закон от 29.12.2010 № 436-ФЗ «О защите детей от информации, причиняющей вред их здоровью и развитию»
   type: federal_law
   status: in_force
+  category: info
+  icon: shield
+  short_description: Защита детей от вредной информации
   in_force_since: 2012-09-01
   last_amended: 2025-12-29
   applies_to:
@@ -188,6 +220,9 @@ laws:
   title: Федеральный закон от 01.06.2005 № 53-ФЗ «О государственном языке Российской Федерации»
   type: federal_law
   status: in_force
+  category: info
+  icon: languages
+  short_description: Государственный язык
   in_force_since: 2005-06-07
   last_amended: 2025-06-24
   applies_to:
@@ -213,6 +248,9 @@ laws:
     Федерации»
   type: federal_law
   status: in_force
+  category: consumer
+  icon: receipt
+  short_description: Контрольно-кассовая техника
   in_force_since: 2003-06-27
   last_amended: 2025-11-28
   applies_to:
@@ -236,6 +274,9 @@ laws:
   title: Федеральный закон от 06.04.2011 № 63-ФЗ «Об электронной подписи»
   type: federal_law
   status: in_force
+  category: info
+  icon: pen-tool
+  short_description: Об электронной подписи
   in_force_since: 2011-04-08
   last_amended: 2025-07-31
   applies_to:
@@ -262,6 +303,9 @@ laws:
   title: Гражданский кодекс РФ (часть I), статьи 435–443 — Оферта и акцепт
   type: code
   status: in_force
+  category: consumer
+  icon: scroll
+  short_description: Публичная оферта (ГК РФ)
   in_force_since: 1995-01-01
   last_amended: 2015-06-01
   applies_to:
@@ -286,6 +330,9 @@ laws:
     индивидуализации»
   type: code
   status: in_force
+  category: copyright
+  icon: copyright
+  short_description: Интеллектуальная собственность (ГК РФ)
   in_force_since: 2008-01-01
   last_amended: 2026-01-04
   applies_to:
@@ -312,6 +359,9 @@ laws:
   title: Маркировка интернет-рекламы (ст. 18.1 ФЗ «О рекламе» + 347-ФЗ от 02.07.2021)
   type: regulation
   status: in_force
+  category: advertising
+  icon: tag
+  short_description: Маркировка интернет-рекламы
   in_force_since: 2022-09-01
   last_amended: 2025-04-01
   applies_to:
@@ -337,6 +387,9 @@ laws:
     обработке в информационных системах персональных данных»
   type: gov_decree
   status: in_force
+  category: privacy
+  icon: shield-check
+  short_description: Уровни защищённости ПДн
   in_force_since: 2012-11-15
   last_amended: 2012-11-01
   applies_to:
@@ -361,6 +414,9 @@ laws:
     купли-продажи»
   type: gov_decree
   status: in_force
+  category: consumer
+  icon: shopping-cart
+  short_description: Правила продажи товаров
   in_force_since: 2021-01-01
   last_amended: 2024-05-17
   applies_to:

@@ -11,6 +11,10 @@ last_amended: 2025-07-31
 
 status: in_force
 
+category: info
+icon: pen-tool
+short_description: "Об электронной подписи"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102146610

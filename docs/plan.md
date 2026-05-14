@@ -71,7 +71,7 @@
 | 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | ✅ Done | [iteration-04-api.md](tasks/iteration-04-api.md) |
 | 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | ✅ Done | [iteration-05-design.md](tasks/iteration-05-design.md) |
 | 5а | Auth refactor: форма входа и разделение free/LLM | API на cookie-сессиях; `POST /scans` принимает `with_llm`, без сессии для `with_llm=true` — 401 | ✅ Done | [iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md) |
-| 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | 📋 Planned | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
+| 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | ✅ Done | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
 | 8 | Production-деплой на Beget VPS | Приложение поднято на VPS под HTTPS | 📋 Planned | [iteration-08-deploy.md](tasks/iteration-08-deploy.md) |
 

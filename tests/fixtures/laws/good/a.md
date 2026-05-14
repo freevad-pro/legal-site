@@ -11,6 +11,10 @@ last_amended: 2024-06-01
 
 status: in_force
 
+category: privacy
+icon: lock
+short_description: "Тестовый закон A"
+
 official_sources:
   - title: "Тестовый источник"
     url: https://example.com/test-a

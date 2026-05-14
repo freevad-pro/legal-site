@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+.env.local
+.env.production.local
+*.log
+.DS_Store
+src/data/laws.generated.ts
+src/data/categories.generated.ts

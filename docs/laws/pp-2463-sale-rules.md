@@ -11,6 +11,10 @@ last_amended: 2024-05-17
 
 status: in_force
 
+category: consumer
+icon: shopping-cart
+short_description: "Правила продажи товаров"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная публикация)"
     url: http://publication.pravo.gov.ru/Document/View/0001202101090017

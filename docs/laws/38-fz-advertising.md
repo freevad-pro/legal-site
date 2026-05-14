@@ -11,6 +11,10 @@ last_amended: 2025-10-27
 
 status: in_force
 
+category: advertising
+icon: megaphone
+short_description: "О рекламе"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102105318

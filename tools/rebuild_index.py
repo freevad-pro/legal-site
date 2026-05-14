@@ -50,6 +50,9 @@ def collect_laws() -> list[dict[str, Any]]:
                 "title": data.get("title"),
                 "type": data.get("type"),
                 "status": data.get("status"),
+                "category": data.get("category"),
+                "icon": data.get("icon"),
+                "short_description": data.get("short_description"),
                 "in_force_since": data.get("in_force_since"),
                 "last_amended": data.get("last_amended"),
                 "applies_to": data.get("applies_to") or [],
@@ -61,6 +64,20 @@ def collect_laws() -> list[dict[str, Any]]:
             }
         )
     return laws
+
+
+def aggregate_categories(laws: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Группирует violations по category. Нужно фронту для шагов прогресса."""
+    totals: dict[str, int] = {}
+    for law in laws:
+        category = law.get("category")
+        if not category:
+            continue
+        totals[category] = totals.get(category, 0) + int(law.get("violations_count") or 0)
+    return [
+        {"category": category, "violations_count": count}
+        for category, count in sorted(totals.items())
+    ]
 
 
 def collect_common() -> list[dict[str, Any]]:
@@ -105,6 +122,7 @@ def main() -> None:
     laws = collect_laws()
     common = collect_common()
     issues = check_integrity(laws, common)
+    categories = aggregate_categories(laws)
 
     index: dict[str, Any] = {
         "schema_version": 1,
@@ -113,6 +131,7 @@ def main() -> None:
         "total_laws": len(laws),
         "total_common_compendiums": len(common),
         "total_violations": sum(law["violations_count"] for law in laws),
+        "categories": categories,
         "laws": laws,
         "common_compendiums": common,
     }

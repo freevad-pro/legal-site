@@ -3,8 +3,11 @@ import contextlib
 import logging
 from collections.abc import AsyncIterator
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
@@ -81,6 +84,28 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Legal_site", version="0.1.0", lifespan=lifespan)
+
+# CORS только если явно указаны dev-origins. В production переменная пустая,
+# фронт лежит рядом с API на одном origin — middleware не подключается.
+if settings.cors_dev_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_dev_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(scan_router)
+
+# Production: отдаём собранный фронт из frontend/out как корневой StaticFiles.
+# Монтаж — после всех роутеров, чтобы не перехватить /api/* и /health.
+# Если каталога нет (фронт не собран — типично для dev), просто не монтируем.
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "out"
+if _FRONTEND_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")
+    logger.info("frontend mounted from %s", _FRONTEND_DIR)
+else:
+    logger.info("frontend/out not found, skipping StaticFiles mount (dev mode)")

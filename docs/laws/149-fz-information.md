@@ -11,6 +11,10 @@ last_amended: 2025-12-29
 
 status: in_force
 
+category: info
+icon: file-text
+short_description: "Об информации и ИТ"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102108264

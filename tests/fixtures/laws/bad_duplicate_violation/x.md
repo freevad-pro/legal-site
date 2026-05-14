@@ -11,6 +11,10 @@ last_amended: 2024-06-01
 
 status: in_force
 
+category: privacy
+icon: lock
+short_description: "Тестовый X"
+
 official_sources:
   - title: "Источник"
     url: https://example.com/x

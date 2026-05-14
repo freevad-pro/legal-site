@@ -166,6 +166,22 @@ def test_post_creates_scan_and_get_returns_summary(
         assert body["url"] == "https://example.ru"
         assert body["result"] is not None
         assert body["error"] is None
+        assert body["with_llm"] is False
+
+
+def test_get_returns_with_llm_true_after_authorized_scan(
+    api_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_fake_run_scan(monkeypatch, [])
+    with TestClient(api_app) as client:
+        _login(client)
+        post = client.post(
+            "/api/v1/scans",
+            json={"url": "example.ru", "with_llm": True},
+        )
+        scan_id = post.json()["scan_id"]
+        body = _wait_for_status(client, scan_id, "done")
+    assert body["with_llm"] is True
 
 
 def test_get_unknown_scan_returns_404(api_app: FastAPI) -> None:

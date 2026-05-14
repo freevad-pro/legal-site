@@ -11,6 +11,10 @@ last_amended: 2025-07-23
 
 status: in_force
 
+category: consumer
+icon: credit-card
+short_description: "Национальная платёжная система"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102148779

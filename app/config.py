@@ -21,5 +21,11 @@ class Settings(BaseSettings):
     session_ttl_days: int = 30
     session_cookie_secure: bool = False
 
+    # CORS-origins для фронта в режиме разработки (Next.js на :3000).
+    # В production оставляем пустым — фронт лежит на одном origin с API,
+    # CORSMiddleware не подключается. Связь с `session_cookie_secure` сознательно
+    # не делаем: «secure cookie» и «нужен CORS» — независимые решения.
+    cors_dev_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 
 settings = Settings()

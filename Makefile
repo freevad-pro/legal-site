@@ -1,6 +1,6 @@
 # На Windows требует GNU Make: либо WSL, либо `choco install make`.
 
-.PHONY: install dev lint fmt test corpus scan user
+.PHONY: install dev lint fmt test corpus scan user build-frontend dev-frontend
 
 install:
 	uv sync
@@ -27,3 +27,15 @@ scan:
 
 user:
 	uv run python -m tools.create_user $(LOGIN)
+
+# Frontend (Next.js 15 + Tailwind, static export).
+# Требует pnpm; см. README про установку через `npm install -g pnpm@9.15.4`.
+
+build-frontend:
+	cd frontend && pnpm install && pnpm build
+
+dev-frontend:
+	cd frontend && pnpm dev
+
+lint-frontend:
+	cd frontend && pnpm lint && pnpm typecheck

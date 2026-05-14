@@ -4,7 +4,7 @@
 
 Подробности — в [docs/idea.md](docs/idea.md), [docs/vision.md](docs/vision.md), [docs/plan.md](docs/plan.md).
 
-**Текущее состояние:** закрыты итерации 0–5 — корпус законов, детерминированный движок, HTTP-API + SSE + PDF, дизайн UI. Следующая — итерация 5а (переход на cookie-сессии и разделение бесплатных/LLM-проверок), затем 6 (Frontend MVP), 7 (LLM), 8 (Deploy). Подробности — [docs/plan.md](docs/plan.md).
+**Текущее состояние:** закрыты итерации 0–5а — корпус законов, детерминированный движок, HTTP-API + SSE + PDF, дизайн UI, cookie-сессии. В работе — итерация 6 (Frontend MVP). Дальше — 7 (LLM), 8 (Deploy). Подробности — [docs/plan.md](docs/plan.md).
 
 ## Доступ
 
@@ -83,11 +83,36 @@ Stop-Process -Id $srv.Id
 | `make test` | Запустить `pytest` |
 | `make corpus` | Пересобрать [docs/laws/index.yml](docs/laws/index.yml) + проверить целостность кросс-ссылок |
 | `make scan URL=<url>` | Просканировать URL и напечатать JSON `ScanResult` в stdout |
+| `make build-frontend` | Собрать фронт (Next.js → `frontend/out/`); FastAPI отдаст его как StaticFiles при следующем `make dev` |
+| `make dev-frontend` | Поднять dev-сервер фронта на `localhost:3000` (с hot-reload, ходит на API через `NEXT_PUBLIC_API_BASE=http://localhost:8000`) |
+
+## Frontend — локальная разработка
+
+Фронт лежит в [frontend/](frontend) (Next.js 15 + Tailwind, статический экспорт). В **production** он собран в `frontend/out/` и отдаётся FastAPI как `StaticFiles` под `/` — один порт `8000`, без CORS:
+
+```bash
+make build-frontend   # один раз — собрать статику
+make dev              # FastAPI + статика на :8000
+```
+
+В **dev**-режиме фронт работает на отдельном порту `:3000` через `pnpm dev` с hot-reload. Cookie-сессии работают через CORS — для `http://localhost:3000` он включён автоматически, когда `SESSION_COOKIE_SECURE=false`:
+
+```bash
+# Терминал 1: бэк
+make dev
+
+# Терминал 2: фронт
+make dev-frontend
+# → http://localhost:3000
+```
+
+`pnpm` ставится один раз: `npm install -g pnpm@9.15.4` (на Node 20.x). На Node 22+ — последний pnpm подходит.
 
 ## Структура
 
 ```
 app/        — FastAPI приложение (точка входа: app.main:app)
+frontend/   — Next.js 15 + Tailwind (UI); собирается в frontend/out/
 tools/      — CLI-утилиты для работы с корпусом законов
 docs/       — документация (vision, plan, ADR) и корпус законов (docs/laws/)
 tests/      — pytest

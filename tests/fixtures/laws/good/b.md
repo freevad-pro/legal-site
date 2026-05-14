@@ -11,6 +11,10 @@ last_amended: 2023-09-15
 
 status: in_force
 
+category: consumer
+icon: shopping-cart
+short_description: "Тестовый закон B"
+
 official_sources:
   - title: "Источник B"
     url: https://example.com/test-b

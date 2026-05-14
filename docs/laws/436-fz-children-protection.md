@@ -11,6 +11,10 @@ last_amended: 2025-12-29
 
 status: in_force
 
+category: info
+icon: shield
+short_description: "Защита детей от вредной информации"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102144548

@@ -11,6 +11,10 @@ last_amended: 2025-12-28
 
 status: in_force
 
+category: consumer
+icon: users
+short_description: "Защита прав потребителей"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102014537
@@ -138,6 +142,8 @@ violations:
     references:
       - "https://www.consultant.ru/document/cons_doc_LAW_305/4f41fe599ce341751e4e34dc50a4b676674c1416/"
       - "https://www.rospotrebnadzor.ru/activities/protection/"
+
+    evidence_template: contacts_no_requisites
 
   - id: 2300-1-incomplete-product-info
     article: "ЗоЗПП, ст. 10"

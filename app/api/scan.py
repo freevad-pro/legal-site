@@ -60,6 +60,7 @@ class ScanSummary(BaseModel):
     scan_id: UUID
     url: str
     status: str
+    with_llm: bool
     started_at: datetime
     finished_at: datetime | None
     error: str | None
@@ -126,6 +127,7 @@ async def get_scan(
         scan_id=state.scan_id,
         url=state.url,
         status=state.status,
+        with_llm=state.with_llm,
         started_at=state.started_at,
         finished_at=state.finished_at,
         error=state.error,

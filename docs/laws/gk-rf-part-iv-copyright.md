@@ -11,6 +11,10 @@ last_amended: 2026-01-04
 
 status: in_force
 
+category: copyright
+icon: copyright
+short_description: "Интеллектуальная собственность (ГК РФ)"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации — ГК РФ часть IV (230-ФЗ от 18.12.2006)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102110716

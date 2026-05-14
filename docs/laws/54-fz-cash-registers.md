@@ -11,6 +11,10 @@ last_amended: 2025-11-28
 
 status: in_force
 
+category: consumer
+icon: receipt
+short_description: "Контрольно-кассовая техника"
+
 official_sources:
   - title: "Официальный интернет-портал правовой информации (исходная редакция)"
     url: http://pravo.gov.ru/proxy/ips/?docbody=&nd=102081780

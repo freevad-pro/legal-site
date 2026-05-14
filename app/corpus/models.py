@@ -20,6 +20,15 @@ Subject = Literal["citizen", "official", "sole_proprietor", "small_org", "organi
 AppliesTo = Literal[
     "all_websites", "ecommerce", "landing", "blog", "media", "service", "gov", "b2b"
 ]
+LawCategory = Literal["privacy", "cookies", "advertising", "consumer", "info", "copyright"]
+EvidenceTemplate = Literal[
+    "footer_no_policy",
+    "form_no_consent",
+    "cookies_before_consent",
+    "contacts_no_requisites",
+    "banner_no_marking",
+    "dnt_ignored",
+]
 
 _VIOLATION_ID_RE = re.compile(r"^[a-z0-9-]+$")
 
@@ -107,6 +116,7 @@ class Violation(BaseModel):
     penalties: tuple[Penalty, ...] = ()
     recommendation: str
     references: tuple[str, ...] = ()
+    evidence_template: EvidenceTemplate | None = None
 
 
 class ReviewLogEntry(BaseModel):
@@ -131,6 +141,10 @@ class Law(BaseModel):
     last_amended: date
 
     status: LawStatus
+
+    category: LawCategory
+    icon: Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]*$")]
+    short_description: Annotated[str, Field(min_length=1, max_length=60)]
 
     official_sources: tuple[Source, ...]
     regulators: tuple[str, ...] = ()
