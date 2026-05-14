@@ -12,7 +12,7 @@
 - **WeasyPrint** + **Jinja2** — генерация PDF-отчёта
 - **SQLite** (через стандартный `sqlite3`) — кэш LLM-ответов и таблица пользователей
 - **httpx** — HTTP-клиент к GigaChat
-- **passlib[bcrypt]** — хэширование паролей
+- **bcrypt** — хэширование паролей (напрямую; `passlib` отброшен на итерации 4 — застрял на 1.7.4 с 2020-го и несовместим с bcrypt 4.x)
 
 ### Frontend
 - **Next.js 15** (App Router) + **TypeScript**, экспорт в статику (`output: 'export'`) — кладётся рядом с бэком, без отдельного Node-рантайма
@@ -75,7 +75,7 @@
 4. **Явная неопределённость лучше тихого «pass».** Любая невозможность проверить (LLM-ответ невалидный JSON, страница не загрузилась, превышен бюджет токенов, таймаут) → статус `inconclusive` в отчёте. Никогда не «pass по умолчанию».
 5. **Ошибки — наверх, не глушим.** Никаких широких `try: ... except: pass`. Ловим только конкретные исключения там, где знаем что делать. Всё остальное — в логи + 500 пользователю.
 6. **Минимум persistence.** В памяти: загруженный корпус, состояние текущего скана. На диске (SQLite): только кэш LLM-ответов и таблица users. Результаты проверок не сохраняются — это явное решение из идеи.
-7. **Тесты — на движок и парсер, не на всё подряд.** pytest покрывает: парсер корпуса, реестр check-функций, нормализацию контента для LLM-кэша. НЕ покрывает: FastAPI-ручки, вёрстку отчёта, Playwright-сценарии.
+7. **Тесты — приоритет на движок и парсер.** pytest **обязательно** покрывает: парсер корпуса, реестр check-функций, движок (`run_scan`), нормализацию контента для LLM-кэша. **Точечно** покрывает: FastAPI-эндпоинты (через `TestClient` с моком engine — на регрессии API-контракта), вёрстку отчёта (что Jinja-шаблон подставляет правильные строки). НЕ покрывает: реальные Playwright-сценарии и реальные внешние сайты.
 8. **Type hints везде, mypy строгий.** Особенно для моделей корпуса, интерфейса `LLMProvider` и результатов проверок. На тестах — не настаиваем.
 
 ## Структура репозитория
@@ -294,10 +294,11 @@ ScanState
  ├─ url: str
  ├─ status: "pending" | "running" | "done" | "failed" | "timeout"
  ├─ started_at, finished_at, last_accessed_at
- ├─ events: list[ScanEvent]       # буфер для SSE replay
- ├─ event_queue: asyncio.Queue    # live-канал для подключённых SSE-клиентов
- ├─ result: ScanResult | None     # заполняется по завершении
- └─ error: str | None             # если status == "failed"
+ ├─ events: list[ScanEvent]              # буфер для SSE replay
+ ├─ queues: list[asyncio.Queue]          # по одной очереди на каждого
+ │                                        # подключённого SSE-клиента
+ ├─ result: ScanResult | None            # заполняется по завершении
+ └─ error: str | None                    # если status == "failed"
 ```
 
 `last_accessed_at` обновляется при каждом обращении к `scan_id`. Через 1 час без обращений — TTL-очистка при следующем обращении к реестру, отдельный поток не нужен.
@@ -307,13 +308,17 @@ ScanState
 ```
 ScanEvent
  ├─ timestamp
- ├─ type: "step" | "violation_found" | "done" | "error"
+ ├─ type: "scanner_started" | "scanner_done" | "violation_evaluated"
+ │        | "done" | "error"
  └─ payload: dict
-    # step:             { step_name: str, progress: 0.0..1.0 }
-    # violation_found:  { violation_id, severity, title }
-    # done:             { summary: {failed, passed, inconclusive} }
-    # error:            { message: str }
+    # scanner_started:     { url: str }
+    # scanner_done:        { url: str }                     # после Playwright.collect
+    # violation_evaluated: { violation_id, law_id, status, severity }
+    # done:                { summary: {failed, passed, inconclusive}, ... }
+    # error:               { message: str }
 ```
+
+`violation_evaluated` публикуется на каждую проверенную violation независимо от исхода (fail/pass/inconclusive) — фронт сам решает, что показывать пользователю. `done` отдаёт суммарный счётчик; в варианте «scanner упал» payload дополнен `error`.
 
 ### Результат проверки
 
@@ -587,10 +592,11 @@ prompt_id, model, tokens_used, verdict, latency_ms, cache_hit, retry_count
 | `GIGACHAT_MODEL` | `GigaChat` | Конкретная модель (`GigaChat`, `GigaChat-Pro`, `GigaChat-Max`) |
 | `YANDEX_GPT_API_KEY` | — | API-ключ Yandex Cloud (если `LLM_PROVIDER=yandex`) |
 | `YANDEX_GPT_FOLDER_ID` | — | Folder ID Yandex Cloud |
-| `DATABASE_PATH` | `/data/db.sqlite` | Путь к SQLite-файлу (на хосте — volume) |
+| `DATABASE_PATH` | `data/db.sqlite` (dev) / `/data/db.sqlite` (prod) | Путь к SQLite-файлу. Локально — относительный путь; в Docker — абсолютный, через env переопределяется на volume `/data` |
 | `CORPUS_PATH` | `docs/laws` | Путь к каталогу с корпусом законов |
 | `PROMPTS_PATH` | `prompts` | Путь к каталогу с LLM-промптами |
-| `SCAN_TIMEOUT_SECONDS` | `300` | Общий таймаут одного скана |
+| `SCAN_TIMEOUT_SECONDS` | `300` | Общий таймаут одного скана (от запуска воркера до завершения) |
+| `PLAYWRIGHT_TIMEOUT_SECONDS` | `60` | Таймаут Playwright на сбор артефактов главной страницы. Меньше общего, чтобы вторичные проверки получили время даже на «тяжёлых» сайтах |
 | `LLM_BUDGET_TOKENS_PER_SCAN` | `50000` | Токен-бюджет на скан |
 | `SCAN_STATE_TTL_SECONDS` | `3600` | TTL для `ScanState` в памяти |
 | `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |

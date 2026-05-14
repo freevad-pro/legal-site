@@ -17,6 +17,7 @@ from app.corpus.models import (
     Source,
     Violation,
 )
+from app.events import ScanEvent
 from app.scanner import PageArtifacts, ScanError
 
 
@@ -153,6 +154,68 @@ def test_run_scan_returns_error_on_scan_error(
     result = asyncio.run(engine.run_scan("https://nope.test/", bundle))
     assert result.findings == ()
     assert result.error is not None and "DNS failed" in result.error
+
+
+def test_run_scan_emits_progress_events(patched_scanner: dict[str, object]) -> None:
+    v1 = _violation(
+        "v-1",
+        page_signals=(
+            PageSignal(type="t", description="x", html_patterns=('input[type="email"]',)),
+        ),
+    )
+    v2 = _violation(
+        "v-2",
+        page_signals=(
+            PageSignal(type="t", description="x", html_patterns=("nonexistent-tag",)),
+        ),
+    )
+    bundle = CorpusBundle(laws=(_law("law-1", (v1, v2)),))
+    patched_scanner["artifacts"] = _artifacts(html='<input type="email">')
+
+    events: list[ScanEvent] = []
+    result = asyncio.run(
+        engine.run_scan("https://example.test/", bundle, on_event=events.append)
+    )
+
+    assert result.error is None
+    assert [e.type for e in events] == [
+        "scanner_done",
+        "violation_evaluated",
+        "violation_evaluated",
+    ]
+    assert events[1].payload["violation_id"] == "v-1"
+    assert events[1].payload["status"] == "fail"
+    assert events[2].payload["violation_id"] == "v-2"
+
+
+def test_run_scan_emits_error_event_on_scanner_failure(
+    patched_scanner: dict[str, object],
+) -> None:
+    bundle = CorpusBundle(
+        laws=(
+            _law(
+                "law-1",
+                (
+                    _violation(
+                        "v-x",
+                        page_signals=(
+                            PageSignal(type="t", description="x", html_patterns=("div",)),
+                        ),
+                    ),
+                ),
+            ),
+        )
+    )
+    patched_scanner["exc"] = ScanError("DNS failed")
+    events: list[ScanEvent] = []
+
+    result = asyncio.run(
+        engine.run_scan("https://nope.test/", bundle, on_event=events.append)
+    )
+
+    assert result.error is not None
+    assert [e.type for e in events] == ["error"]
+    assert events[0].payload["message"] == "DNS failed"
 
 
 def test_run_scan_copies_violation_fields_to_finding(patched_scanner: dict[str, object]) -> None:

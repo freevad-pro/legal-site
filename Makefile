@@ -1,6 +1,6 @@
 # На Windows требует GNU Make: либо WSL, либо `choco install make`.
 
-.PHONY: install dev lint fmt test corpus scan
+.PHONY: install dev lint fmt test corpus scan user
 
 install:
 	uv sync
@@ -24,3 +24,6 @@ corpus:
 
 scan:
 	uv run python -m app.scan $(URL)
+
+user:
+	uv run python -m tools.create_user $(LOGIN)

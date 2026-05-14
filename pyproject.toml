@@ -14,6 +14,9 @@ dependencies = [
     "soupsieve>=2.8.3",
     "httpx>=0.28.1",
     "playwright>=1.59.0",
+    "bcrypt>=4.1,<5",
+    "weasyprint>=63",
+    "jinja2>=3.1",
 ]
 
 [dependency-groups]
@@ -21,6 +24,7 @@ dev = [
     "ruff>=0.7",
     "mypy>=1.13",
     "pytest>=8.3",
+    "pytest-asyncio>=0.24",
     "types-PyYAML>=6.0",
     "types-beautifulsoup4>=4.12.0.20250516",
 ]
@@ -48,6 +52,11 @@ disallow_untyped_defs = false
 module = ["frontmatter"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["weasyprint", "weasyprint.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+asyncio_mode = "auto"

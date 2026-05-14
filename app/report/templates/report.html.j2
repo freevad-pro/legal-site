@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Аудит {{ result.url }}</title>
+  <style>
+    @font-face {
+      font-family: "ReportSans";
+      src: url("../fonts/DejaVuSans.ttf") format("truetype");
+      font-weight: normal;
+    }
+    @font-face {
+      font-family: "ReportSans";
+      src: url("../fonts/DejaVuSans-Bold.ttf") format("truetype");
+      font-weight: bold;
+    }
+    @font-face {
+      font-family: "ReportMono";
+      src: url("../fonts/DejaVuSansMono.ttf") format("truetype");
+    }
+    @page { size: A4; margin: 1.6cm; }
+    body { font-family: "ReportSans", sans-serif; font-size: 10pt; color: #222; }
+    h1 { font-size: 18pt; margin: 0 0 4pt 0; }
+    h2 { font-size: 13pt; margin: 14pt 0 4pt 0; border-bottom: 1px solid #ccc; padding-bottom: 2pt; }
+    .meta { color: #555; font-size: 9pt; margin-bottom: 10pt; }
+    .summary { background: #f4f4f4; padding: 8pt 10pt; margin-bottom: 12pt; }
+    .summary span { margin-right: 14pt; }
+    .finding { border-left: 3pt solid #888; padding: 4pt 8pt; margin: 6pt 0; }
+    .finding.fail.critical { border-color: #b00020; }
+    .finding.fail.high     { border-color: #e85d04; }
+    .finding.fail.medium   { border-color: #faa307; }
+    .finding.fail.low      { border-color: #adb5bd; }
+    .finding.inconclusive  { border-color: #6c757d; background: #f8f9fa; }
+    .finding.pass          { display: none; }
+    .title { font-weight: bold; }
+    .article { color: #555; font-size: 9pt; }
+    .evidence {
+      font-family: "ReportMono", monospace;
+      font-size: 8.5pt;
+      background: #f0f0f0;
+      padding: 4pt 6pt;
+      margin: 4pt 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .recommendation { margin-top: 4pt; }
+    .penalties { color: #555; font-size: 9pt; margin-top: 3pt; }
+  </style>
+</head>
+<body>
+  <h1>Аудит соответствия законодательству РФ</h1>
+  <div class="meta">
+    <div><b>URL:</b> {{ result.url }}</div>
+    <div><b>Дата сканирования:</b> {{ result.finished_at.strftime("%Y-%m-%d %H:%M UTC") }}</div>
+  </div>
+
+  <div class="summary">
+    <span><b>Найдено нарушений:</b> {{ counts.fail }}</span>
+    <span><b>Без замечаний:</b> {{ counts.pass_ }}</span>
+    <span><b>Не определено:</b> {{ counts.inconclusive }}</span>
+  </div>
+
+  {% if result.error %}
+    <div class="finding fail high">
+      <div class="title">Ошибка сканирования</div>
+      <div class="evidence">{{ result.error }}</div>
+    </div>
+  {% endif %}
+
+  {% for section_label, section_status, items in sections %}
+    {% if items %}
+      <h2>{{ section_label }}</h2>
+      {% for f in items %}
+        <div class="finding {{ f.status }} {{ f.severity }}">
+          <div class="title">{{ f.title }}</div>
+          <div class="article">{{ f.article }} · {{ f.law_id }} · severity: {{ f.severity }}</div>
+          {% if f.evidence %}<div class="evidence">{{ f.evidence }}</div>{% endif %}
+          {% if f.explanation %}<div>{{ f.explanation }}</div>{% endif %}
+          <div class="recommendation"><b>Рекомендация:</b> {{ f.recommendation }}</div>
+          {% if f.penalties %}
+            <div class="penalties">
+              <b>Возможные штрафы:</b>
+              {% for p in f.penalties %}
+                {{ p.coap_article }} ({{ p.subject }}): {{ p.amount_min }}{% if p.amount_max %}–{{ p.amount_max }}{% endif %} ₽{% if not loop.last %};{% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+</body>
+</html>

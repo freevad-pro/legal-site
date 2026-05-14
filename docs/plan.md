@@ -68,7 +68,7 @@
 | 1 | Корпус MVP — 15 актов + 2 обзора | Полный валидированный справочник законов, 100 нарушений | ✅ Done | — |
 | 2 | Каркас приложения и инструментарий | Рабочая разработческая среда: FastAPI отвечает, `make` команды работают | ✅ Done | [iteration-02-skeleton.md](tasks/iteration-02-skeleton.md) |
 | 3 | Детерминированный движок (CLI-MVP) | На любой URL получаем JSON Finding'ов по детерминированным правилам | ✅ Done | [iteration-03-deterministic-engine.md](tasks/iteration-03-deterministic-engine.md) |
-| 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | 📋 Planned | [iteration-04-api.md](tasks/iteration-04-api.md) |
+| 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | ✅ Done | [iteration-04-api.md](tasks/iteration-04-api.md) |
 | 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | 📋 Planned | [iteration-05-design.md](tasks/iteration-05-design.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | 📋 Planned | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
@@ -181,7 +181,7 @@
 - `GET /api/v1/scans/{id}/report.pdf` — lazy-рендер WeasyPrint через `asyncio.to_thread`
 - HTTP Basic Auth защищает всё, кроме `/health`; пароли — bcrypt в SQLite
 - `tools/create_user.py` — CLI для создания/обновления пользователей
-- SQLite в режиме WAL, схема `users` (таблица `llm_cache` появится в итерации 6 — её рано создавать)
+- SQLite в режиме WAL, схема `users` (таблица `llm_cache` появится в итерации 7 — её рано создавать)
 - `asyncio.Semaphore(1)` ограничивает одновременные сканы
 - `asyncio.wait_for(timeout=300)` — общий таймаут скана
 - TTL для `ScanState` в памяти (1 час, очистка при обращении)

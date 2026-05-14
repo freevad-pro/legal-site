@@ -13,37 +13,11 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from app.config import settings
 from app.corpus.loader import CorpusLoadError, load_corpus
 from app.engine import run_scan
-
-
-def normalize_url(raw: str) -> str:
-    """Нормализовать пользовательский URL по правилам vision.
-
-    - strip пробелов;
-    - если нет схемы → префиксуем `https://`;
-    - валидируем `netloc` (непустой, содержит точку или `localhost`);
-    - http→https автоматически не апгрейдим (отсутствие HTTPS — повод для нарушения).
-    """
-
-    raw = (raw or "").strip()
-    if not raw:
-        raise ValueError("invalid URL: empty input")
-
-    parsed = urlparse(raw)
-    if not parsed.scheme:
-        parsed = urlparse(f"https://{raw}")
-
-    netloc = parsed.netloc
-    if not netloc:
-        raise ValueError(f"invalid URL: empty host in {raw!r}")
-    host = netloc.split(":", 1)[0]
-    if "." not in host and host != "localhost":
-        raise ValueError(f"invalid URL: host {host!r} does not look like an address")
-    return parsed.geturl()
+from app.url import normalize_url
 
 
 def _build_parser() -> argparse.ArgumentParser:
