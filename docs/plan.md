@@ -70,7 +70,7 @@
 | 3 | Детерминированный движок (CLI-MVP) | На любой URL получаем JSON Finding'ов по детерминированным правилам | ✅ Done | [iteration-03-deterministic-engine.md](tasks/iteration-03-deterministic-engine.md) |
 | 4 | API, аутентификация, отчёт PDF | End-to-end через curl: SSE прогресс + PDF-отчёт + Basic Auth | ✅ Done | [iteration-04-api.md](tasks/iteration-04-api.md) |
 | 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | ✅ Done | [iteration-05-design.md](tasks/iteration-05-design.md) |
-| 5а | Auth refactor: форма входа и разделение free/LLM | API на cookie-сессиях; `POST /scans` принимает `with_llm`, без сессии для `with_llm=true` — 401 | 📋 Planned | [iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md) |
+| 5а | Auth refactor: форма входа и разделение free/LLM | API на cookie-сессиях; `POST /scans` принимает `with_llm`, без сессии для `with_llm=true` — 401 | ✅ Done | [iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | 📋 Planned | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
 | 8 | Production-деплой на Beget VPS | Приложение поднято на VPS под HTTPS | 📋 Planned | [iteration-08-deploy.md](tasks/iteration-08-deploy.md) |
@@ -232,12 +232,12 @@
 
 **Критерии завершения (DoD):**
 - Таблица `sessions` создаётся в `app/db.py` (`CREATE TABLE IF NOT EXISTS`, индекс по `expires_at`).
-- `app/auth.py` переписан без `HTTPBasic`. Появляются: `create_session(login) -> session_id`, `delete_session(session_id)`, `get_user_by_session(session_id) -> str | None` (обновляет `last_seen_at`), Depends `get_optional_user` и `require_user` для FastAPI.
-- Новый `app/api/auth.py`: `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Pydantic-модели `LoginRequest`, `UserInfo`. На неверном пароле — 401 с единой формулировкой (без enumeration).
+- `app/auth.py` переписан без `HTTPBasic`. Появляются: `create_session(login) -> session_id`, `delete_session(session_id)`, `get_user_by_session(session_id) -> str | None` (обновляет `last_seen_at`), `purge_expired_sessions()`, Depends `get_optional_user` для FastAPI.
+- Новый `app/api/auth.py`: `POST /api/v1/auth/login` (200 + cookie), `POST /api/v1/auth/logout` (идемпотентный 204), `GET /api/v1/auth/me` (всегда 200 + `login: str | null`). Pydantic-модели `LoginRequest` (с min/max-length), `UserInfo`. На неверном пароле в login — 401 с единой формулировкой (без enumeration). В `app/main.py` — фоновая таска `_purge_sessions_loop` (раз в час).
 - `app/api/scan.py`: убрана глобальная `dependencies=[Depends(get_current_user)]` на роутере; `POST /scans` принимает `{url: str, with_llm: bool = False}`; если `with_llm=true` без валидной сессии — 401. `GET /scans/{id}`, `/events`, `/report.pdf` публичны (UUID — достаточная защита для MVP).
 - `ScanState` дополнен полем `with_llm: bool` (immutable, фиксируется при создании); `run_scan` принимает флаг keyword-only аргументом. В итерации 5а engine просто принимает и сохраняет флаг — семантических check-функций ещё нет, фильтровать нечего. Механизм отбора LLM-check'ов вводится в итерации 7.
 - `app/config.py`: `BASIC_AUTH_REALM` удалён; добавлены `session_cookie_name`, `session_ttl_days`, `session_cookie_secure`. `.env.example` синхронизирован.
-- `tools/create_user.py` без изменений.
+- `tools/create_user.py` вызывает `upsert_user_and_revoke_sessions` — смена пароля одной транзакцией гасит все активные сессии пользователя.
 - `tests/test_auth.py` переписан: login → cookie → /me → logout, ошибка пароля, ошибка с истёкшей сессией, очистка истёкших сессий при login.
 - `tests/test_api_scans.py` обновлён: анонимный POST /scans → 202 и работает, POST /scans с `with_llm=true` без cookie → 401, с cookie → 202; GET /scans/{id}, /events, /report.pdf публичны.
 - End-to-end через `curl`:
@@ -249,7 +249,7 @@
 
 **Полезный результат:** API соответствует продуктовой модели «бесплатно всем / LLM-только-владельцу». Фронт итерации 6 пишется сразу под форму входа + тоггл `with_llm`, без переходного Basic Auth.
 
-**Артефакты:** обновлённые `app/auth.py`, `app/db.py`, `app/api/scan.py`, `app/config.py`; новый `app/api/auth.py`; обновлённые `.env.example`, `tests/test_auth.py`, `tests/test_api_scans.py`.
+**Артефакты:** обновлённые `app/auth.py`, `app/db.py` (+`upsert_user_and_revoke_sessions`), `app/api/scan.py`, `app/scan_state.py`, `app/api/scan_worker.py`, `app/engine.py`, `app/config.py`, `app/main.py`, `tools/create_user.py`; новый `app/api/auth.py`; обновлённые `.env.example`, `tests/test_auth.py`, `tests/test_api_scans.py`, `tests/test_scan_worker.py`.
 
 ---
 

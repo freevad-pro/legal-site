@@ -12,9 +12,14 @@ class Settings(BaseSettings):
     user_agent: str = "LegalSiteScanner/0.1 (+https://github.com/freevad-pro/legal-site)"
 
     database_path: Path = Path("data/db.sqlite")
-    basic_auth_realm: str = "Legal_site"
     scan_timeout_seconds: int = 300
     scan_state_ttl_seconds: int = 3600
+
+    # Session cookie. `session_cookie_secure=False` — безопасный default для
+    # локального dev по http://127.0.0.1; в проде поднимаем через ENV.
+    session_cookie_name: str = "legal_site_session"
+    session_ttl_days: int = 30
+    session_cookie_secure: bool = False
 
 
 settings = Settings()

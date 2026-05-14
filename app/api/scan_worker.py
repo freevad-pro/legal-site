@@ -43,7 +43,12 @@ async def run_scan_job(
 
         try:
             result: ScanResult = await asyncio.wait_for(
-                run_scan(state.url, bundle, on_event=state.publish),
+                run_scan(
+                    state.url,
+                    bundle,
+                    on_event=state.publish,
+                    with_llm=state.with_llm,
+                ),
                 timeout=settings.scan_timeout_seconds,
             )
         except TimeoutError:

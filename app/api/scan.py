@@ -1,7 +1,11 @@
 """HTTP-API сканов: POST/GET/SSE.
 
-Все эндпоинты — за Basic Auth (`Depends(get_current_user)`). `/health` живёт
-в `app/api/health.py` и остаётся без аутентификации.
+`POST /scans` принимает `with_llm: bool` — анонимный пользователь может
+запросить только бесплатные детерминированные проверки (`with_llm=false`);
+расширенный анализ (`with_llm=true`) требует валидной cookie-сессии.
+
+`GET /scans/{id}`, `/events`, `/report.pdf` — публичные (UUIDv4 — достаточная
+защита для MVP). `/health` живёт в `app/api/health.py`.
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.api.scan_worker import run_scan_job
-from app.auth import get_current_user
+from app.auth import get_optional_user
 from app.corpus.models import CorpusBundle
 from app.engine import ScanResult
 from app.events import ScanEvent
@@ -30,13 +34,17 @@ from app.url import normalize_url
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1", dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/api/v1")
 
 
 class CreateScanRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: str = Field(..., description="URL для сканирования")
+    with_llm: bool = Field(
+        default=False,
+        description="Расширенный анализ (LLM); требует валидной сессии",
+    )
 
     @field_validator("url")
     @classmethod
@@ -92,13 +100,19 @@ async def create_scan(
     bundle: Annotated[CorpusBundle, Depends(_bundle)],
     semaphore: Annotated[asyncio.Semaphore, Depends(_semaphore)],
     tasks: Annotated[set[asyncio.Task[None]], Depends(_background_tasks)],
+    user: Annotated[str | None, Depends(get_optional_user)] = None,
 ) -> CreateScanResponse:
-    state = registry.create(payload.url)
+    if payload.with_llm and user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Расширенный анализ доступен только после входа",
+        )
+    state = registry.create(payload.url, with_llm=payload.with_llm)
     task = asyncio.create_task(run_scan_job(state, bundle, semaphore))
     # Держим сильную ссылку, иначе Python GC может прибрать таску до завершения.
     tasks.add(task)
     task.add_done_callback(tasks.discard)
-    logger.info("scan created for %s", state.url)
+    logger.info("scan created for %s (with_llm=%s)", state.url, state.with_llm)
     return CreateScanResponse(scan_id=state.scan_id)
 
 

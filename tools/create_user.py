@@ -13,7 +13,11 @@ from pathlib import Path
 
 from app.auth import hash_password
 from app.config import settings
-from app.db import get_user_password_hash, init_db, upsert_user
+from app.db import (
+    get_user_password_hash,
+    init_db,
+    upsert_user_and_revoke_sessions,
+)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -51,8 +55,12 @@ def main() -> int:
         print("error: пустой пароль", file=sys.stderr)
         return 1
 
-    upsert_user(db_path, login, hash_password(password))
+    revoked = upsert_user_and_revoke_sessions(
+        db_path, login, hash_password(password)
+    )
     print(f"ok: пользователь {login!r} {'обновлён' if existed else 'создан'}", file=sys.stderr)
+    if revoked > 0:
+        print(f"Сброшено активных сессий: {revoked}", file=sys.stderr)
     return 0
 
 

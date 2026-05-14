@@ -74,7 +74,13 @@ async def test_run_scan_job_done_success(
     now = datetime.now(UTC)
     result = ScanResult(url=state.url, started_at=now, finished_at=now, findings=findings)
 
-    async def fake_run_scan(url: str, bundle: CorpusBundle, *, on_event: object) -> ScanResult:
+    async def fake_run_scan(
+        url: str,
+        bundle: CorpusBundle,
+        *,
+        on_event: object,
+        with_llm: bool = False,
+    ) -> ScanResult:
         return result
 
     _install_run_scan(monkeypatch, fake_run_scan)
@@ -108,7 +114,13 @@ async def test_run_scan_job_failed_when_scanner_returned_error(
         error="DNS resolution failed",
     )
 
-    async def fake_run_scan(url: str, bundle: CorpusBundle, *, on_event: object) -> ScanResult:
+    async def fake_run_scan(
+        url: str,
+        bundle: CorpusBundle,
+        *,
+        on_event: object,
+        with_llm: bool = False,
+    ) -> ScanResult:
         return result_with_error
 
     _install_run_scan(monkeypatch, fake_run_scan)
@@ -131,7 +143,13 @@ async def test_run_scan_job_timeout(
 ) -> None:
     monkeypatch.setattr(settings, "scan_timeout_seconds", 0)
 
-    async def fake_run_scan(url: str, bundle: CorpusBundle, *, on_event: object) -> ScanResult:
+    async def fake_run_scan(
+        url: str,
+        bundle: CorpusBundle,
+        *,
+        on_event: object,
+        with_llm: bool = False,
+    ) -> ScanResult:
         await asyncio.sleep(10)
         raise AssertionError("should not reach")
 
@@ -153,7 +171,13 @@ async def test_run_scan_job_failed_on_unhandled_exception(
     subscriber: asyncio.Queue[ScanEvent | None],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fake_run_scan(url: str, bundle: CorpusBundle, *, on_event: object) -> ScanResult:
+    async def fake_run_scan(
+        url: str,
+        bundle: CorpusBundle,
+        *,
+        on_event: object,
+        with_llm: bool = False,
+    ) -> ScanResult:
         raise RuntimeError("boom")
 
     _install_run_scan(monkeypatch, fake_run_scan)
@@ -171,7 +195,13 @@ async def test_run_scan_job_always_closes_subscribers(
     empty_bundle: CorpusBundle,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fake_run_scan(url: str, bundle: CorpusBundle, *, on_event: object) -> ScanResult:
+    async def fake_run_scan(
+        url: str,
+        bundle: CorpusBundle,
+        *,
+        on_event: object,
+        with_llm: bool = False,
+    ) -> ScanResult:
         raise RuntimeError("boom")
 
     _install_run_scan(monkeypatch, fake_run_scan)

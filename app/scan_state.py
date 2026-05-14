@@ -25,6 +25,7 @@ TERMINAL_STATUSES: frozenset[ScanStatus] = frozenset({"done", "failed", "timeout
 class ScanState:
     scan_id: UUID
     url: str
+    with_llm: bool = False
     status: ScanStatus = "pending"
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     finished_at: datetime | None = None
@@ -65,8 +66,8 @@ class ScanRegistry:
         self._states: dict[UUID, ScanState] = {}
         self._ttl = ttl
 
-    def create(self, url: str) -> ScanState:
-        state = ScanState(scan_id=uuid4(), url=url)
+    def create(self, url: str, *, with_llm: bool = False) -> ScanState:
+        state = ScanState(scan_id=uuid4(), url=url, with_llm=with_llm)
         self._states[state.scan_id] = state
         return state
 

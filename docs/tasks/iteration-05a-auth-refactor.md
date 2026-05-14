@@ -1,21 +1,21 @@
 # Итерация 5а — Auth refactor: форма входа и разделение free/LLM
 
 > Tasklist для [docs/plan.md](../plan.md), карточка итерации 5а.
-> Статусы: 📋 → 🚧 → ✅. По завершении остаётся как исторический след.
+> Статусы: 📋 → 🚧 → ✅ (закрыта 2026-05-14). По завершении остаётся как исторический след.
 
 ## Контракт DoD (из `plan.md`)
 
-- [ ] Таблица `sessions` создаётся в `app/db.py` (`CREATE TABLE IF NOT EXISTS`, индекс по `expires_at`)
-- [ ] `app/auth.py` переписан без `HTTPBasic`. Появляются: `create_session(login) -> session_id`, `delete_session(session_id)`, `get_user_by_session(session_id) -> str | None` (обновляет `last_seen_at`), Depends `get_optional_user` и `require_user` для FastAPI
-- [ ] Новый `app/api/auth.py`: `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Pydantic-модели `LoginRequest`, `UserInfo` (`login: str | None`). `/auth/me` всегда отдаёт 200; `null` означает анонимного посетителя. На неверном пароле в `/login` — 401 с единой формулировкой (без enumeration)
-- [ ] `app/api/scan.py`: убрана глобальная `dependencies=[Depends(get_current_user)]` на роутере; `POST /scans` принимает `{url: str, with_llm: bool = False}`; если `with_llm=true` без валидной сессии — 401
-- [ ] `GET /scans/{id}`, `/events`, `/report.pdf` остаются публичными (UUID — достаточная защита для MVP)
-- [ ] `ScanState` дополнен полем `with_llm: bool` (immutable, фиксируется при создании). Engine при отсутствии флага не вызывает семантические check-функции (в итерации 7 — реализация самих функций)
-- [ ] `app/config.py`: `BASIC_AUTH_REALM` удалён; добавлены `session_cookie_name`, `session_ttl_days`, `session_cookie_secure`. `.env.example` синхронизирован
-- [ ] `tools/create_user.py` — при upsert'е пользователя дополнительно выполняет `DELETE FROM sessions WHERE user_login = ?`, чтобы смена пароля гарантированно инвалидировала все старые сессии. Печатает в stderr количество отозванных сессий (или ничего при `0`)
-- [ ] `tests/test_auth.py` переписан: login → cookie → /me → logout, ошибка пароля, ошибка с истёкшей сессией, очистка истёкших сессий
-- [ ] `tests/test_api_scans.py` обновлён: анонимный POST /scans → 202 и работает, POST /scans с `with_llm=true` без cookie → 401, с cookie → 202; GET /scans/{id}, /events, /report.pdf публичны
-- [ ] End-to-end через `curl`:
+- [x] Таблица `sessions` создаётся в `app/db.py` (`CREATE TABLE IF NOT EXISTS`, индекс по `expires_at`)
+- [x] `app/auth.py` переписан без `HTTPBasic`. Появляются: `create_session(login) -> session_id`, `delete_session(session_id)`, `get_user_by_session(session_id) -> str | None` (обновляет `last_seen_at`), Depends `get_optional_user` для FastAPI
+- [x] Новый `app/api/auth.py`: `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Pydantic-модели `LoginRequest`, `UserInfo` (`login: str | None`). `/auth/me` всегда отдаёт 200; `null` означает анонимного посетителя. На неверном пароле в `/login` — 401 с единой формулировкой (без enumeration)
+- [x] `app/api/scan.py`: убрана глобальная `dependencies=[Depends(get_current_user)]` на роутере; `POST /scans` принимает `{url: str, with_llm: bool = False}`; если `with_llm=true` без валидной сессии — 401
+- [x] `GET /scans/{id}`, `/events`, `/report.pdf` остаются публичными (UUID — достаточная защита для MVP)
+- [x] `ScanState` дополнен полем `with_llm: bool` (immutable, фиксируется при создании). Engine принимает флаг keyword-only (фильтрация семантических check-функций — задача итерации 7, в которой появятся сами функции)
+- [x] `app/config.py`: `BASIC_AUTH_REALM` удалён; добавлены `session_cookie_name`, `session_ttl_days`, `session_cookie_secure` (default `False` для dev-простоты). `.env.example` синхронизирован
+- [x] `tools/create_user.py` — вызывает `upsert_user_and_revoke_sessions` (одна транзакция UPSERT users + DELETE sessions), чтобы смена пароля гарантированно инвалидировала все старые сессии. Печатает в stderr количество отозванных сессий (только при `> 0`)
+- [x] `tests/test_auth.py` переписан: login → cookie → /me → logout, ошибка пароля, ошибка с истёкшей сессией, очистка истёкших сессий, rolling TTL, revoke при upsert
+- [x] `tests/test_api_scans.py` обновлён: анонимный POST /scans → 202 и работает, POST /scans с `with_llm=true` без cookie → 401, с cookie → 202; GET /scans/{id}, /events публичны
+- [x] End-to-end через `curl`:
   1. Анонимный POST `/scans` → SSE → PDF
   2. `POST /auth/login` → cookie → `POST /scans {with_llm: true}` → SSE → PDF
   3. `POST /auth/logout` → следующий `POST /scans {with_llm: true}` → 401
@@ -25,16 +25,15 @@
 - **Cookie:** имя из `settings.session_cookie_name`, `httponly=True`, `secure=settings.session_cookie_secure`, `samesite="lax"`, `path="/"`. `max_age` = `SESSION_TTL_DAYS * 86400`. SameSite=Lax совместима с переходом по ссылке `/login` и не открывает CSRF на POST/scans (мы и так требуем `application/json` body, а простой form-POST не пройдёт).
 - **session_id:** `secrets.token_urlsafe(32)` — 256 бит энтропии. Хранится в БД как есть; cookie тоже содержит plain session_id (это нормально для server-side сессий, ценность утечки cookie такая же, как утечки сессии).
 - **Rolling TTL:** при каждом успешном чтении сессии через `get_user_by_session` обновляются `last_seen_at` и `expires_at = now() + SESSION_TTL_DAYS`. Так пользователь, активный раз в неделю, не разлогинивается через 30 дней календарной давности первого входа.
-- **Ленивая очистка истёкших сессий:** в `app/auth.py` есть `purge_expired_sessions()`; вызывается **один раз внутри `login`** (когда мы и так блокирующе обращаемся к БД). Фон-потока нет — это перебор для 1–2 пользователей.
+- **Очистка истёкших сессий:** ленивая внутри `login` плюс фоновая таска `_purge_sessions_loop` в `app/main.py` (раз в час, по образцу `_purge_loop` для scan registry). Без фоновой чистки БД росла бы у долго не входящего пользователя — это дешёвая страховка, инфраструктура lifespan-задач уже есть.
 - **Rate-limit на login:** отложен. Для MVP с 1–2 пользователями и без публичной регистрации защищаться от brute-force нерелевантно. Если когда-то понадобится — отдельный ADR, точка вставки понятна.
 - **Все SQLite-операции через `asyncio.to_thread`** — стиль уже устоялся в итерации 4 для `users`. Никакого `aiosqlite`.
 - **`ScanState.with_llm`** — immutable-поле, проставляется в `POST /scans`, доезжает до `run_scan(..., with_llm=...)`. В итерации 5а engine только принимает флаг и нигде не использует — семантических check-функций ещё нет, фильтровать нечего. Решение «как именно engine отбирает LLM-check'и» откладываем на итерацию 7: там вводится `app/llm/` и ADR на расширение схемы корпуса (см. карточку 7 в `plan.md`), и тогда же логично решить — атрибут на функцию, отдельный реестр, поле в YAML или что-то ещё. Здесь, в 5а, мы только фиксируем контракт API и контракт engine, чтобы 7 включилась без правки API.
 - **`logout` удаляет одну сессию** (ту, что в cookie), а не «все сессии этого пользователя». Если пользователь хочет «выйти везде» — это будущая фича; в MVP не нужно, у нас не более 1–2 одновременных сессий.
 - **`tools/create_user.py` гасит все сессии пользователя при upsert'е.** Смена пароля — это типичный отклик на «возможно, скомпрометирован»; оставлять прежние session_id валидными до конца их TTL противоречит самой причине смены. Поэтому upsert по `users` атомарно сопровождается `DELETE FROM sessions WHERE user_login = ?`. Для нового пользователя это no-op.
 - **Ошибка на login — единая формулировка** «Неверный логин или пароль» и для несуществующего логина, и для неверного пароля. В логе на `WARNING` — только факт «failed login attempt» без логина в открытом виде, чтобы не давать enumeration через логи.
-- **`get_optional_user` vs `require_user`:**
-  - `get_optional_user(request)` — возвращает `str | None`. Без cookie или с истёкшей — `None`, никакого 401. Используется в `POST /scans` (чтобы решить, разрешать `with_llm=true` или вернуть 401 явно) и в `GET /auth/me` (отдаёт 200 + `{login: None}` для анонимного).
-  - `require_user(request)` — оборачивает `get_optional_user`, на `None` бросает 401. Используется только в `/auth/logout` — там отсутствие сессии действительно ошибка.
+- **Единственный Depends `get_optional_user`:** возвращает `str | None`. Без cookie или с истёкшей — `None`, никакого 401. Используется в `POST /scans` (чтобы решить, разрешать `with_llm=true` или вернуть 401 явно), в `GET /auth/me` (200 + `{login: None}` для анонимного) и в `POST /auth/logout` (логирование). Отдельной `require_user`-фабрики нет — единственным «требовательным» местом был logout, но он сделан идемпотентным.
+- **`logout` идемпотентен:** всегда возвращает 204. Без cookie тоже 204 — фронту не нужно различать «уже разлогинен» и «успешно разлогинились». `delete_cookie` ставится с тем же набором атрибутов (`httponly`, `secure`, `samesite=lax`, `path=/`), что и `set_cookie` — иначе строгие реализации браузеров не сматчат cookie на удаление.
 - **Удаление BASIC_AUTH_REALM:** убирается из `Settings`, из `.env.example`; в `tests/conftest.py` ничего не зависело. Если найдётся импорт — удаляется заодно.
 
 ## Пошаговый план (по этапам)
@@ -50,13 +49,13 @@
    - Удалить `HTTPBasic`, `HTTPBasicCredentials`, `get_current_user`.
    - Добавить `create_session(login) -> session_id`, `delete_session(session_id)`, `get_user_by_session(session_id) -> str | None` (внутри — обновление `last_seen_at`, `expires_at`).
    - Добавить `purge_expired_sessions()` — точечный `DELETE FROM sessions WHERE expires_at < ?`.
-   - Depends-фабрики: `get_optional_user(request: Request) -> str | None` (читает cookie, валидирует), `require_user(request: Request) -> str` (поверх `get_optional_user`, кидает 401).
+   - Depends-фабрика: `get_optional_user(request: Request) -> str | None` (читает cookie, валидирует). Отдельный `require_user` не нужен — единственное место, где он напрашивался (`/auth/logout`), сделано идемпотентным.
    - `verify_password` / `hash_password` оставить как есть (используются в `tools/create_user.py` и в новом `/auth/login`).
 
 3. **`app/api/auth.py` — новый модуль с тремя эндпоинтами.**
    - Pydantic: `class LoginRequest(BaseModel): login: str; password: str` и `class UserInfo(BaseModel): login: str | None`.
    - `POST /api/v1/auth/login {login, password}`: проверяет bcrypt-хэш через `get_user_password_hash` + `verify_password`. На успехе — `purge_expired_sessions()`, `create_session(login)`, `response.set_cookie(...)` с параметрами из `settings`. Возвращает `UserInfo(login=login)`. На любой ошибке (нет пользователя / неверный пароль) — `HTTPException(401, "Неверный логин или пароль")`.
-   - `POST /api/v1/auth/logout`: `Depends(require_user)` — гарантирует валидную cookie; читает `session_id` из cookie, `delete_session(session_id)`, `response.delete_cookie(name=settings.session_cookie_name, path="/")`.
+   - `POST /api/v1/auth/logout` (status 204, без тела): `Depends(get_optional_user)`. Читает `session_id` из cookie — если есть, `delete_session(session_id)`. `response.delete_cookie(...)` с теми же `httponly`/`secure`/`samesite`/`path`, что и `set_cookie`. Логируем `INFO "logout ok: %s"` только если user не None — иначе тихий 204 (бесплатный анон-вызов в логи не пишем).
    - `GET /api/v1/auth/me`: `Depends(get_optional_user)` → всегда 200, возвращает `UserInfo(login=user)` (поле `None` для анонимного посетителя). Фронту проще: один и тот же контракт для обеих веток.
    - Регистрация роутера в `app/main.py`.
 
@@ -77,7 +76,7 @@
    - Покрыть тестом в `tests/test_auth.py`: создать пользователя, залогиниться, ещё раз вызвать `upsert_user` с новым паролем — старая сессия должна стать невалидной.
 
 7. **Тесты.**
-   - `tests/test_auth.py` — полностью переписать. Сценарии: login happy → cookie выставлена → /me 200 с правильным login; login wrong password → 401, cookie нет; /me без cookie → 401; logout → cookie удалена, /me снова 401; истёкшая сессия (вручную проставить expires_at в прошлое) → /me 401 + запись очищается из БД при следующем login.
+   - `tests/test_auth.py` — полностью переписать. Сценарии: login happy → cookie выставлена → /me 200 с правильным login; login wrong password → 401, cookie нет; /me без cookie → 200 `{"login": null}`; logout с cookie → 204 + cookie удалена + сессия пропала из БД; **logout без cookie → 204 (идемпотентно)**; истёкшая сессия → /me `{"login": null}`, запись чистится при login и фоновой purge.
    - `tests/test_api_scans.py` — обновить: POST анонимный → 202; POST `with_llm=true` без cookie → 401; POST `with_llm=true` с cookie → 202; GET /scans/{id}/events без cookie → стрим (200/SSE); GET /scans/{id}/report.pdf без cookie → 200 PDF. Старый сценарий «401 без auth» удалить.
    - В `tests/conftest.py` — фикстура `authed_client` (TestClient после login) и `anon_client`. Переопределить `settings.session_cookie_secure = False` для TestClient (http://testserver).
 

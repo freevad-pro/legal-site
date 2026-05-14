@@ -1,22 +1,33 @@
-"""HTTP Basic Auth поверх таблицы `users`.
+"""Аутентификация по cookie-сессии.
 
-Пароли хранятся как bcrypt-хэши. Проверка идёт через `bcrypt.checkpw`
-с `secrets.compare_digest`-семантикой (bcrypt сам делает constant-time).
+Пароли хранятся как bcrypt-хэши (см. `verify_password`).
+Сессии — server-side: 256-бит `session_id` в SQLite + HttpOnly Secure cookie.
+TTL rolling — каждое чтение валидной сессии сдвигает `expires_at`.
+
+Async-обёртки над `app.db.*` через `asyncio.to_thread` — SQLite stdlib
+синхронный, мы не блокируем event loop.
 """
 
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated
+import logging
+import secrets
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import Request
 
 from app.config import settings
-from app.db import get_user_password_hash
+from app.db import (
+    delete_expired_sessions,
+    delete_session_by_id,
+    insert_session,
+    select_session,
+    update_session_seen,
+)
 
-_security = HTTPBasic(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def hash_password(plain: str) -> str:
@@ -30,30 +41,82 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def _unauthorized() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication required",
-        headers={"WWW-Authenticate": f'Basic realm="{settings.basic_auth_realm}"'},
+def _ttl() -> timedelta:
+    return timedelta(days=settings.session_ttl_days)
+
+
+async def create_session(login: str) -> str:
+    """Создать новую сессию и вернуть session_id (для записи в cookie)."""
+
+    session_id = secrets.token_urlsafe(32)
+    now = datetime.now(UTC)
+    expires_at = now + _ttl()
+    await asyncio.to_thread(
+        insert_session,
+        settings.database_path,
+        session_id,
+        login,
+        now,
+        expires_at,
+        now,
+    )
+    return session_id
+
+
+async def delete_session(session_id: str) -> int:
+    """Удалить сессию (logout). Возвращает число удалённых строк."""
+
+    return await asyncio.to_thread(
+        delete_session_by_id, settings.database_path, session_id
     )
 
 
-async def get_current_user(
-    creds: Annotated[HTTPBasicCredentials | None, Depends(_security)],
-) -> str:
-    if creds is None:
-        raise _unauthorized()
+async def get_user_by_session(session_id: str) -> str | None:
+    """Вернуть login по session_id или None.
 
-    hashed = await asyncio.to_thread(
-        get_user_password_hash, settings.database_path, creds.username
+    На валидной сессии — обновляет `last_seen_at`/`expires_at` (rolling TTL).
+    Истёкшие сессии трактуются как `None` (физическая чистка — ленивая,
+    через `purge_expired_sessions` при login).
+    """
+
+    row = await asyncio.to_thread(
+        select_session, settings.database_path, session_id
     )
-    # Сверяем даже при отсутствующем пользователе — constant-time, чтобы
-    # не дать различать «нет такого логина» и «неверный пароль» по таймингу.
-    dummy_hash = "$2b$12$" + "." * 53
-    candidate = hashed if hashed is not None else dummy_hash
-    password_ok = verify_password(creds.password, candidate)
+    if row is None:
+        return None
+    expires_at = datetime.fromisoformat(row["expires_at"])
+    now = datetime.now(UTC)
+    if expires_at < now:
+        return None
 
-    if hashed is None or not password_ok:
-        raise _unauthorized()
+    new_expires = now + _ttl()
+    await asyncio.to_thread(
+        update_session_seen,
+        settings.database_path,
+        session_id,
+        now,
+        new_expires,
+    )
+    login: str = row["user_login"]
+    return login
 
-    return creds.username
+
+async def purge_expired_sessions() -> int:
+    """Удалить истёкшие сессии. Возвращает число удалённых строк."""
+
+    now = datetime.now(UTC)
+    removed = await asyncio.to_thread(
+        delete_expired_sessions, settings.database_path, now
+    )
+    if removed > 0:
+        logger.info("purged %d expired session(s)", removed)
+    return removed
+
+
+async def get_optional_user(request: Request) -> str | None:
+    """Depends-фабрика: вернуть login по cookie или None для анонимного."""
+
+    session_id = request.cookies.get(settings.session_cookie_name)
+    if not session_id:
+        return None
+    return await get_user_by_session(session_id)

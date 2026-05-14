@@ -82,6 +82,7 @@ async def run_scan(
     bundle: CorpusBundle,
     *,
     on_event: EventSink | None = None,
+    with_llm: bool = False,
 ) -> ScanResult:
     """Запустить сканирование одного URL.
 
@@ -91,7 +92,13 @@ async def run_scan(
 
     `on_event` — опциональный sync-коллбэк для публикации прогресса
     (`scanner_done`, `violation_evaluated`, `error`). CLI его не передаёт.
+
+    `with_llm` — флаг расширенного анализа. В итерации 5а только принимается
+    и не используется: реальный механизм отбора LLM-check'ов появится в
+    итерации 7 вместе с `app/llm/`.
     """
+
+    del with_llm  # будет использовано в итерации 7
 
     def _emit(event: ScanEvent) -> None:
         if on_event is not None:

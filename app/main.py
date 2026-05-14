@@ -6,8 +6,10 @@ from datetime import timedelta
 
 from fastapi import FastAPI
 
+from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.scan import router as scan_router
+from app.auth import purge_expired_sessions
 from app.config import settings
 from app.corpus.loader import load_corpus
 from app.db import init_db
@@ -33,6 +35,23 @@ async def _purge_loop(registry: ScanRegistry) -> None:
             logger.exception("purge loop iteration failed")
 
 
+async def _purge_sessions_loop() -> None:
+    """Раз в час чистит просроченные cookie-сессии.
+
+    Дополняет ленивую очистку в `login` для случая, когда пользователь
+    долго не входит, а записи в `sessions` всё накапливаются.
+    """
+
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            await purge_expired_sessions()
+        except asyncio.CancelledError:
+            return
+        except Exception:  # noqa: BLE001 - не даём фоновой таске убить себя
+            logger.exception("session purge iteration failed")
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_db(settings.database_path)
@@ -46,13 +65,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # отсюда через `add_done_callback`.
     app.state.background_tasks = set()
     purge_task = asyncio.create_task(_purge_loop(app.state.scan_registry))
+    sessions_purge_task = asyncio.create_task(_purge_sessions_loop())
     logger.info("Legal_site started; corpus loaded, DB ready")
     try:
         yield
     finally:
-        purge_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await purge_task
+        for bg_task in (purge_task, sessions_purge_task):
+            bg_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await bg_task
         # Дожидаемся, чтобы пользовательские сканы не оборвались на shutdown.
         for task in list(app.state.background_tasks):
             with contextlib.suppress(Exception):
@@ -61,4 +82,5 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Legal_site", version="0.1.0", lifespan=lifespan)
 app.include_router(health_router)
+app.include_router(auth_router)
 app.include_router(scan_router)
