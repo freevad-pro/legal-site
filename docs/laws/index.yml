@@ -1,0 +1,401 @@
+# Машинный индекс справочника законов.
+# Сгенерирован из YAML-фронтматтеров файлов в docs/laws/.
+# Не править руками — пересборка: python tools/rebuild_index.py
+
+schema_version: 1
+generated_at: '2026-05-14'
+generator: tools/rebuild_index.py
+total_laws: 15
+total_common_compendiums: 3
+total_violations: 100
+laws:
+- id: 149-fz
+  file: 149-fz-information.md
+  short_title: 149-ФЗ
+  title: Федеральный закон от 27.07.2006 № 149-ФЗ «Об информации, информационных технологиях и о защите информации»
+  type: federal_law
+  status: in_force
+  in_force_since: 2007-02-09
+  last_amended: 2025-12-29
+  applies_to:
+  - all_websites
+  tags:
+  - information
+  - ori_registry
+  - content_blocking
+  - owner_info
+  - ugc
+  - news_aggregators
+  - social_networks
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 8
+  regulators:
+  - Роскомнадзор
+  - Генпрокуратура РФ
+  - ФСБ России
+- id: 152-fz
+  file: 152-fz-personal-data.md
+  short_title: 152-ФЗ
+  title: Федеральный закон от 27.07.2006 № 152-ФЗ «О персональных данных»
+  type: federal_law
+  status: in_force
+  in_force_since: 2007-01-26
+  last_amended: 2025-06-24
+  applies_to:
+  - all_websites
+  tags:
+  - personal_data
+  - consent
+  - privacy_policy
+  - rkn_notification
+  - data_breach
+  - cross_border
+  - localization
+  - cookies
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 9
+  regulators:
+  - Роскомнадзор
+  - ФСБ России
+  - ФСТЭК России
+- id: 161-fz
+  file: 161-fz-payment-system.md
+  short_title: 161-ФЗ
+  title: Федеральный закон от 27.06.2011 № 161-ФЗ «О национальной платёжной системе»
+  type: federal_law
+  status: in_force
+  in_force_since: 2011-09-29
+  last_amended: 2025-07-23
+  applies_to:
+  - ecommerce
+  tags:
+  - payments
+  - ecommerce
+  - pci_dss
+  - sbp
+  - online_payment
+  - cbr
+  - acquiring
+  - digital_ruble
+  - e_money
+  - refund
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 7
+  regulators:
+  - Центральный банк Российской Федерации
+  - Росфинмониторинг
+  - Роспотребнадзор
+- id: 2300-1
+  file: 2300-1-consumer-protection.md
+  short_title: ЗоЗПП
+  title: Закон РФ от 07.02.1992 № 2300-1 «О защите прав потребителей»
+  type: rf_law
+  status: in_force
+  in_force_since: 1992-04-07
+  last_amended: 2025-12-28
+  applies_to:
+  - ecommerce
+  - landing
+  - service
+  tags:
+  - consumer_rights
+  - ecommerce
+  - seller_info
+  - return
+  - public_offer
+  - russian_language
+  - distance_selling
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 8
+  regulators:
+  - Роспотребнадзор
+  - ФАС России
+- id: 242-fz
+  file: 242-fz-data-localization.md
+  short_title: 242-ФЗ
+  title: Федеральный закон от 21.07.2014 № 242-ФЗ «О внесении изменений в отдельные законодательные акты Российской Федерации
+    в части уточнения порядка обработки персональных данных в информационно-телекоммуникационных сетях»
+  type: federal_law
+  status: in_force
+  in_force_since: 2015-09-01
+  last_amended: 2014-12-31
+  applies_to:
+  - all_websites
+  tags:
+  - personal_data
+  - localization
+  - hosting
+  - foreign_services
+  - cross_border
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 5
+  regulators:
+  - Роскомнадзор
+- id: 38-fz
+  file: 38-fz-advertising.md
+  short_title: 38-ФЗ
+  title: Федеральный закон от 13.03.2006 № 38-ФЗ «О рекламе»
+  type: federal_law
+  status: in_force
+  in_force_since: 2006-07-01
+  last_amended: 2025-10-27
+  applies_to:
+  - all_websites
+  tags:
+  - advertising
+  - fas
+  - misleading_ads
+  - hidden_ads
+  - prohibited_goods
+  - financial_ads
+  - medicine_ads
+  - bad_ads
+  - minors_protection
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 7
+  regulators:
+  - ФАС России
+- id: 436-fz
+  file: 436-fz-children-protection.md
+  short_title: 436-ФЗ
+  title: Федеральный закон от 29.12.2010 № 436-ФЗ «О защите детей от информации, причиняющей вред их здоровью и развитию»
+  type: federal_law
+  status: in_force
+  in_force_since: 2012-09-01
+  last_amended: 2025-12-29
+  applies_to:
+  - all_websites
+  tags:
+  - children_protection
+  - age_rating
+  - content_classification
+  - age_gate
+  - lgbt_propaganda
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 6
+  regulators:
+  - Роскомнадзор
+- id: 53-fz
+  file: 53-fz-state-language.md
+  short_title: 53-ФЗ
+  title: Федеральный закон от 01.06.2005 № 53-ФЗ «О государственном языке Российской Федерации»
+  type: federal_law
+  status: in_force
+  in_force_since: 2005-06-07
+  last_amended: 2025-06-24
+  applies_to:
+  - all_websites
+  tags:
+  - state_language
+  - russian_language
+  - anglicisms
+  - foreign_words
+  - consumer_information
+  - signs
+  - advertising
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 6
+  regulators:
+  - Роспотребнадзор
+  - ФАС России
+- id: 54-fz
+  file: 54-fz-cash-registers.md
+  short_title: 54-ФЗ
+  title: Федеральный закон от 22.05.2003 № 54-ФЗ «О применении контрольно-кассовой техники при осуществлении расчётов в Российской
+    Федерации»
+  type: federal_law
+  status: in_force
+  in_force_since: 2003-06-27
+  last_amended: 2025-11-28
+  applies_to:
+  - ecommerce
+  tags:
+  - ecommerce
+  - online_cash_register
+  - receipt
+  - ofd
+  - payments
+  - fns
+  - fiscalization
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 6
+  regulators:
+  - ФНС России
+- id: 63-fz
+  file: 63-fz-electronic-signature.md
+  short_title: 63-ФЗ
+  title: Федеральный закон от 06.04.2011 № 63-ФЗ «Об электронной подписи»
+  type: federal_law
+  status: in_force
+  in_force_since: 2011-04-08
+  last_amended: 2025-07-31
+  applies_to:
+  - ecommerce
+  - service
+  tags:
+  - electronic_signature
+  - pep
+  - ukep
+  - unep
+  - online_contracts
+  - identification
+  - esia
+  - offer_acceptance
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 7
+  regulators:
+  - Минцифры России
+  - ФСБ России
+- id: gk-rf-offer
+  file: gk-rf-offer.md
+  short_title: Оферта ГК РФ
+  title: Гражданский кодекс РФ (часть I), статьи 435–443 — Оферта и акцепт
+  type: code
+  status: in_force
+  in_force_since: 1995-01-01
+  last_amended: 2015-06-01
+  applies_to:
+  - ecommerce
+  - landing
+  - service
+  tags:
+  - public_offer
+  - acceptance
+  - contract
+  - ecommerce
+  - agreement
+  - user_terms
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 5
+  regulators: []
+- id: gk-rf-part-iv
+  file: gk-rf-part-iv-copyright.md
+  short_title: ГК РФ ч. IV
+  title: Гражданский кодекс Российской Федерации, Часть IV — «Права на результаты интеллектуальной деятельности и средства
+    индивидуализации»
+  type: code
+  status: in_force
+  in_force_since: 2008-01-01
+  last_amended: 2026-01-04
+  applies_to:
+  - all_websites
+  tags:
+  - copyright
+  - intellectual_property
+  - trademark
+  - content
+  - photography
+  - brand_protection
+  - domain_names
+  - software
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 8
+  regulators:
+  - Роспатент
+  - ФАС России
+  - Суд по интеллектуальным правам
+- id: ord-ad-marking
+  file: ord-ad-marking.md
+  short_title: Маркировка интернет-рекламы
+  title: Маркировка интернет-рекламы (ст. 18.1 ФЗ «О рекламе» + 347-ФЗ от 02.07.2021)
+  type: regulation
+  status: in_force
+  in_force_since: 2022-09-01
+  last_amended: 2025-04-01
+  applies_to:
+  - all_websites
+  tags:
+  - advertising
+  - ord
+  - erid
+  - erir
+  - ad_marking
+  - rkn
+  - internet_advertising
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 6
+  regulators:
+  - Роскомнадзор
+  - ФАС России
+- id: pp-1119
+  file: pp-1119-pdn-protection.md
+  short_title: ПП РФ № 1119
+  title: Постановление Правительства РФ от 01.11.2012 № 1119 «Об утверждении требований к защите персональных данных при их
+    обработке в информационных системах персональных данных»
+  type: gov_decree
+  status: in_force
+  in_force_since: 2012-11-15
+  last_amended: 2012-11-01
+  applies_to:
+  - all_websites
+  tags:
+  - personal_data
+  - security
+  - protection_levels
+  - technical_measures
+  - ispdn
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 5
+  regulators:
+  - Роскомнадзор
+  - ФСТЭК России
+  - ФСБ России
+- id: pp-2463
+  file: pp-2463-sale-rules.md
+  short_title: ПП РФ № 2463
+  title: Постановление Правительства РФ от 31.12.2020 № 2463 «Об утверждении Правил продажи товаров по договору розничной
+    купли-продажи»
+  type: gov_decree
+  status: in_force
+  in_force_since: 2021-01-01
+  last_amended: 2024-05-17
+  applies_to:
+  - ecommerce
+  tags:
+  - ecommerce
+  - distance_selling
+  - return_policy
+  - seller_info
+  - delivery
+  - sale_rules
+  verified_at: 2026-05-13
+  verified: partial
+  violations_count: 7
+  regulators:
+  - Роспотребнадзор
+common_compendiums:
+- id: cookies-in-russia
+  file: common/cookies-in-russia.md
+  title: Регулирование cookie в Российской Федерации
+  document_kind: compendium
+  status: in_force
+  verified_at: 2026-05-13
+  verified: partial
+- id: data-coverage-limitations
+  file: common/data-coverage-limitations.md
+  title: Границы верификации данных в справочнике
+  document_kind: compendium
+  status: in_force
+  verified_at: 2026-05-13
+  verified: full
+- id: koap-overview
+  file: common/koap-overview.md
+  title: Сводный обзор статей КоАП РФ, применимых к сайтам и веб-приложениям
+  document_kind: compendium
+  status: in_force
+  verified_at: 2026-05-13
+  verified: partial
