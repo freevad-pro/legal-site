@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Оплата заказа</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/cart">Корзина</a>
+            <a href="/checkout">Оформление</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Оплата заказа</h1>
+
+        <section class="order-summary">
+            <p>Сумма к оплате: 1 250 ₽</p>
+        </section>
+
+        <section class="payment">
+            <h2>Платёжные данные</h2>
+            <iframe src="https://yookassa.ru/checkout/payments/v2/contract" width="600" height="400"></iframe>
+        </section>
+
+        <section class="manual-card-fallback" style="display:none">
+            <form>
+                <label>Номер карты:
+                    <input type="text" name="card_number" autocomplete="cc-number">
+                </label>
+                <label>CVV:
+                    <input type="text" name="cvv" autocomplete="cc-csc">
+                </label>
+                <button type="submit">Оплатить</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <a href="/privacy">Политика обработки персональных данных</a>
+        <a href="/oferta">Публичная оферта</a>
+    </footer>
+</body>
+</html>

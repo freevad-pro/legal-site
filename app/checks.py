@@ -42,12 +42,12 @@ from urllib.parse import unquote, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup, Tag
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from soupsieve.util import SelectorSyntaxError
 
 from app.corpus.models import PageSignal, SiteSignal
 from app.scanner import PageArtifacts
-from app.types import Status
+from app.types import InconclusiveReason, Status
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,16 @@ class CheckResult(BaseModel):
     status: Status
     evidence: str | None = None
     explanation: str | None = None
+    inconclusive_reason: InconclusiveReason | None = None
+
+    @model_validator(mode="after")
+    def _reason_only_when_inconclusive(self) -> CheckResult:
+        if self.inconclusive_reason is not None and self.status != "inconclusive":
+            raise ValueError(
+                f"inconclusive_reason is set ({self.inconclusive_reason!r}) "
+                f"but status is {self.status!r}; reason is only valid for inconclusive"
+            )
+        return self
 
 
 CheckFunction = Callable[[Signal, PageArtifacts], CheckResult]
@@ -210,6 +220,80 @@ def _check_required_keywords(keywords: Iterable[str], artifacts: PageArtifacts) 
     return CheckResult(status="pass", explanation="all keywords present in main page text")
 
 
+def _check_prohibited_keywords(keywords: Iterable[str], artifacts: PageArtifacts) -> CheckResult:
+    """Обратная семантика `_check_required_keywords`: fail при наличии ключа.
+
+    Ищем подстроку в plain-text главной (без word-boundary — это known limitation,
+    см. ADR-0003). При первом совпадении возвращаем `fail` с найденным ключом в
+    evidence. Пустые ключи пропускаем.
+    """
+
+    soup = _parse(artifacts.html)
+    text = _plain_text(soup).lower()
+    for kw in keywords:
+        normalized = kw.lower().strip()
+        if not normalized:
+            continue
+        if normalized in text:
+            return CheckResult(
+                status="fail",
+                evidence=kw,
+                explanation=f"prohibited keyword found in main page text: {kw!r}",
+            )
+    return CheckResult(
+        status="pass",
+        explanation="no prohibited keywords found in main page text",
+    )
+
+
+def _check_pattern_contains_prohibited(
+    html_patterns: tuple[str, ...],
+    prohibited_keywords: tuple[str, ...],
+    artifacts: PageArtifacts,
+) -> CheckResult:
+    """Контекстный prohibited: ищем ключи ВНУТРИ найденных html_patterns-элементов.
+
+    Симметричен `_check_pattern_with_escape`, но «эскейп» текстовый и инверсный:
+    мы ищем не отсутствие селектора, а присутствие подстроки внутри найденного
+    блока. Семантика — «иностранное слово в рекламном блоке без перевода»
+    (38-ФЗ, ст. 5 ч. 11): фраза «BUY NOW» внутри `<button>` или `.banner` → fail;
+    та же фраза вне триггерных элементов (произвольный текст, `<script>`,
+    атрибуты других тегов) → игнорируется.
+
+    - html_patterns ничего не сматчил → pass (нет повода для проверки).
+    - Триггер сработал, в каком-либо элементе встретился ключ → fail
+      (evidence = ключ, explanation указывает на матчивший селектор).
+    - Триггер сработал, ключей нет → pass.
+
+    Без word-boundary (как и в `_check_prohibited_keywords`); предпочитайте
+    многословные ключи вроде «BUY NOW», чтобы избегать ложных матчей.
+    """
+
+    soup = _parse(artifacts.html)
+    normalized = [
+        (raw, raw.lower().strip()) for raw in prohibited_keywords if raw.lower().strip()
+    ]
+    for pattern in html_patterns:
+        for element in _safe_select(soup, pattern):
+            element_text = " ".join(element.get_text(separator=" ", strip=True).split()).lower()
+            if not element_text:
+                continue
+            for raw, kw in normalized:
+                if kw in element_text:
+                    return CheckResult(
+                        status="fail",
+                        evidence=raw,
+                        explanation=(
+                            f"prohibited keyword {raw!r} found inside element "
+                            f"matched by selector {pattern!r}"
+                        ),
+                    )
+    return CheckResult(
+        status="pass",
+        explanation="no prohibited keywords found inside trigger elements",
+    )
+
+
 def _check_required_headers(required: Iterable[str], artifacts: PageArtifacts) -> CheckResult:
     present = {key.lower() for key in artifacts.headers}
     missing = [h for h in required if h.lower() not in present]
@@ -235,15 +319,26 @@ def _check_required_protocol(scheme: str, artifacts: PageArtifacts) -> CheckResu
 def aggregate_or(results: Iterable[CheckResult]) -> CheckResult:
     """Объединить несколько суб-результатов одного сигнала через OR.
 
-    `fail` если хоть один fail; `pass` если все pass; иначе `inconclusive`
-    (значит — нет fail, но есть хотя бы один inconclusive).
-    Evidence/explanation берётся от первого fail (если есть), иначе от первого
-    inconclusive, иначе от первого pass.
+    Приоритеты:
+    1. Хоть один fail → итог fail (evidence/explanation от первого fail).
+    2. Иначе хоть один **реальный** inconclusive (с `inconclusive_reason ≠
+       check_not_implemented`) → итог inconclusive с reason от первого реального.
+    3. Иначе если все inconclusive — заглушки (`check_not_implemented`) → итог
+       inconclusive с reason=`check_not_implemented` (такой finding будет скрыт
+       engine'ом, см. ADR-0003).
+    4. Иначе все pass → итог pass.
+
+    Без п. 2-3 порядок sub_signals в YAML определял бы, скрыт ли finding,
+    что давало бы нестабильное поведение.
     """
 
     results = list(results)
     if not results:
-        return CheckResult(status="inconclusive", explanation="no sub-results to aggregate")
+        return CheckResult(
+            status="inconclusive",
+            explanation="no sub-results to aggregate",
+            inconclusive_reason="evidence_missing",
+        )
 
     fails = [r for r in results if r.status == "fail"]
     if fails:
@@ -252,9 +347,13 @@ def aggregate_or(results: Iterable[CheckResult]) -> CheckResult:
 
     inconclusives = [r for r in results if r.status == "inconclusive"]
     if inconclusives:
-        first = inconclusives[0]
+        real = [r for r in inconclusives if r.inconclusive_reason != "check_not_implemented"]
+        chosen = real[0] if real else inconclusives[0]
         return CheckResult(
-            status="inconclusive", evidence=first.evidence, explanation=first.explanation
+            status="inconclusive",
+            evidence=chosen.evidence,
+            explanation=chosen.explanation,
+            inconclusive_reason=chosen.inconclusive_reason,
         )
 
     return CheckResult(status="pass", explanation="all sub-checks passed")
@@ -294,10 +393,12 @@ def _find_policy_url(artifacts: PageArtifacts) -> str | None:
 
 
 def _not_implemented(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
+    del artifacts
     name = signal.check or "<unknown>"
     return CheckResult(
         status="inconclusive",
         explanation=f"check {name!r} not implemented in iteration 3",
+        inconclusive_reason="check_not_implemented",
     )
 
 
@@ -714,6 +815,7 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
         return CheckResult(
             status="inconclusive",
             explanation="combine-signals not supported in iteration 3",
+            inconclusive_reason="check_not_implemented",
         )
 
     if signal.check:
@@ -723,21 +825,65 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
             return CheckResult(
                 status="inconclusive",
                 explanation=f"unknown check {signal.check!r}",
+                inconclusive_reason="check_not_implemented",
             )
         return fn(signal, artifacts)
 
+    # Q4 (ADR-0003): «текстовый триггер + эскейп без html_patterns» — пара
+    # required_keywords+required_absent описывает семантическую проверку
+    # «если упомянуто X, должно быть Y» (БАД→дисклеймер, кредит→ПСК и т. п.).
+    # Детерминированно через OR-агрегацию это даёт ложные fail; реальный сигнал
+    # появится в итерации 7 через LLM. До тех пор — context_dependent (скрывается
+    # в engine как и check_not_implemented).
+    if (
+        isinstance(signal, PageSignal)
+        and signal.required_keywords
+        and signal.required_absent
+        and not signal.html_patterns
+    ):
+        return CheckResult(
+            status="inconclusive",
+            explanation="text-trigger+escape requires semantic check (deferred to LLM)",
+            inconclusive_reason="context_dependent",
+        )
+
     sub_results: list[CheckResult] = []
-    if signal.required_keywords:
-        sub_results.append(_check_required_keywords(signal.required_keywords, artifacts))
-    if isinstance(signal, PageSignal):
-        if signal.html_patterns and signal.required_absent:
-            sub_results.append(
-                _check_pattern_with_escape(signal.html_patterns, signal.required_absent, artifacts)
+
+    # Контекстный prohibited (html_patterns + prohibited_keywords без required_absent)
+    # обрабатывается одним sub-result, который покрывает оба поля: иначе обычная
+    # OR-агрегация дала бы fail на любом сайте с триггерным селектором независимо
+    # от наличия ключа (см. ADR-0003, итерация 6б заход 3).
+    contextual_prohibited = (
+        isinstance(signal, PageSignal)
+        and signal.html_patterns
+        and signal.prohibited_keywords
+        and not signal.required_absent
+    )
+
+    if contextual_prohibited:
+        assert isinstance(signal, PageSignal)
+        sub_results.append(
+            _check_pattern_contains_prohibited(
+                signal.html_patterns, signal.prohibited_keywords, artifacts
             )
-        elif signal.html_patterns:
-            sub_results.append(_check_html_patterns_only(signal.html_patterns, artifacts))
-        elif signal.required_absent:
-            sub_results.append(_check_required_absent_only(signal.required_absent, artifacts))
+        )
+    elif signal.required_keywords:
+        sub_results.append(_check_required_keywords(signal.required_keywords, artifacts))
+    elif signal.prohibited_keywords:
+        sub_results.append(_check_prohibited_keywords(signal.prohibited_keywords, artifacts))
+
+    if isinstance(signal, PageSignal):
+        if not contextual_prohibited:
+            if signal.html_patterns and signal.required_absent:
+                sub_results.append(
+                    _check_pattern_with_escape(
+                        signal.html_patterns, signal.required_absent, artifacts
+                    )
+                )
+            elif signal.html_patterns:
+                sub_results.append(_check_html_patterns_only(signal.html_patterns, artifacts))
+            elif signal.required_absent:
+                sub_results.append(_check_required_absent_only(signal.required_absent, artifacts))
         if signal.required_headers:
             sub_results.append(_check_required_headers(signal.required_headers, artifacts))
         if signal.required_protocol:

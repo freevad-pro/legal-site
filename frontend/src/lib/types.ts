@@ -3,6 +3,10 @@
 
 export type Severity = "low" | "medium" | "high" | "critical";
 export type FindingStatus = "pass" | "fail" | "inconclusive";
+export type InconclusiveReason =
+  | "check_not_implemented"
+  | "context_dependent"
+  | "evidence_missing";
 
 export type LawCategory =
   | "privacy"
@@ -41,6 +45,7 @@ export interface Finding {
   recommendation: string;
   penalties: Penalty[];
   evidence_template: EvidenceTemplate | null;
+  inconclusive_reason: InconclusiveReason | null;
 }
 
 export interface ScanResult {

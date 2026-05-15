@@ -246,7 +246,7 @@ violations:
       page_signals:
         - type: anglicisms_in_consumer_text
           description: "Транслитерированные англицизмы в видимом тексте для потребителей"
-          required_keywords:
+          prohibited_keywords:
             - "диджитал"
             - "мерч"
             - "коуч"

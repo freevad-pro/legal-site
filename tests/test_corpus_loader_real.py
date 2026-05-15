@@ -33,3 +33,28 @@ def test_real_corpus_152_fz_no_consent_form_exists() -> None:
     law_id, violation = found
     assert law_id == "152-fz"
     assert violation.severity == "high"
+
+
+def test_real_corpus_incident_notification_has_single_sub_signal() -> None:
+    """После итерации 6б: `152-fz-incident-notification-missed` сохраняет только
+    `incident_response_procedure_missing`; sub-signal `dpo_contact_missing`
+    удалён как семантически нерелевантный (см. ADR-0003)."""
+    bundle = load_corpus(REAL_CORPUS)
+    found = bundle.find_violation("152-fz-incident-notification-missed")
+    assert found is not None
+    _, violation = found
+    assert len(violation.detection.page_signals) == 0
+    assert len(violation.detection.site_signals) == 1
+    assert violation.detection.site_signals[0].type == "incident_response_procedure_missing"
+
+
+def test_real_corpus_data_breach_no_weak_headers_sub_signal() -> None:
+    """После итерации 6б: `152-fz-data-breach` теряет `weak_security_headers`
+    (заголовки проверяются в pp-1119-secure-http-headers, см. ADR-0003)."""
+    bundle = load_corpus(REAL_CORPUS)
+    found = bundle.find_violation("152-fz-data-breach")
+    assert found is not None
+    _, violation = found
+    page_signal_types = {s.type for s in violation.detection.page_signals}
+    assert "weak_security_headers" not in page_signal_types
+    assert "missing_https" in page_signal_types

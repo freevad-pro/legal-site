@@ -14,15 +14,16 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from playwright.async_api import Error as PlaywrightError
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app import scanner
 from app.checks import CheckResult, aggregate_or, evaluate
 from app.config import settings
+from app.context import ScanContext, detect_context
 from app.corpus.models import CorpusBundle, Penalty, Violation
 from app.events import ScanEvent
 from app.scanner import PageArtifacts, ScanError
-from app.types import Status
+from app.types import InconclusiveReason, Status
 
 EventSink = Callable[[ScanEvent], None]
 
@@ -71,6 +72,16 @@ class Finding(BaseModel):
     recommendation: str
     penalties: tuple[Penalty, ...] = ()
     evidence_template: str | None = None
+    inconclusive_reason: InconclusiveReason | None = None
+
+    @model_validator(mode="after")
+    def _reason_only_when_inconclusive(self) -> Finding:
+        if self.inconclusive_reason is not None and self.status != "inconclusive":
+            raise ValueError(
+                f"inconclusive_reason is set ({self.inconclusive_reason!r}) "
+                f"but status is {self.status!r}; reason is only valid for inconclusive"
+            )
+        return self
 
 
 class ScanResult(BaseModel):
@@ -96,15 +107,42 @@ def _violation_to_finding(law_id: str, violation: Violation, aggregated: CheckRe
         recommendation=violation.recommendation,
         penalties=violation.penalties,
         evidence_template=violation.evidence_template,
+        inconclusive_reason=aggregated.inconclusive_reason,
     )
 
 
-def _evaluate_violation(law_id: str, violation: Violation, artifacts: PageArtifacts) -> Finding:
+def _evaluate_violation(
+    law_id: str,
+    violation: Violation,
+    artifacts: PageArtifacts,
+    context: ScanContext,
+) -> Finding | None:
+    """Оценить одно нарушение. Возвращает `None`, если нарушение должно быть
+    скрыто из отчёта.
+
+    Скрытие срабатывает в двух случаях (см. ADR-0003):
+    1. Нарушение не применимо к контексту скана: `not context.applies(violation)`
+       (его `applicability` не покрывается активными тегами). Проверка идёт
+       первой — экономит вычисления для нерелевантных нарушений.
+    2. Итог `inconclusive` с reason `check_not_implemented` (все sub-signals —
+       заглушки / combine / unknown check) или `context_dependent` (Q4 в
+       tasklist 6б: «текстовый триггер + эскейп», детерминированно не
+       проверяется, оживёт через LLM в итерации 7).
+    """
+
+    if not context.applies(violation):
+        return None
+
     sub_results: list[CheckResult] = [
         evaluate(s, artifacts) for s in violation.detection.page_signals
     ]
     sub_results.extend(evaluate(s, artifacts) for s in violation.detection.site_signals)
     aggregated = aggregate_or(sub_results)
+    if aggregated.status == "inconclusive" and aggregated.inconclusive_reason in (
+        "check_not_implemented",
+        "context_dependent",
+    ):
+        return None
     return _violation_to_finding(law_id, violation, aggregated)
 
 
@@ -155,9 +193,14 @@ async def run_scan(
 
     _emit(ScanEvent(type="scanner_done", payload={"url": artifacts.url}))
 
+    context = detect_context(artifacts)
+    logger.info("scan context detected: %s", sorted(context.active_tags))
+
     findings: list[Finding] = []
     for law_id, violation in _violations_in_category_order(bundle):
-        finding = _evaluate_violation(law_id, violation, artifacts)
+        finding = _evaluate_violation(law_id, violation, artifacts, context)
+        if finding is None:
+            continue
         findings.append(finding)
         _emit(
             ScanEvent(

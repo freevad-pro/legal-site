@@ -11,6 +11,7 @@ from app.corpus.models import (
     Law,
     PageSignal,
     Penalty,
+    SiteSignal,
     Source,
     Violation,
 )
@@ -150,6 +151,69 @@ def test_law_official_sources_must_have_at_least_one() -> None:
 def test_page_signal_allows_extra_fields() -> None:
     sig = PageSignal(type="t", description="d", expected_status=200, min_chars=1500)  # type: ignore[call-arg]
     assert sig.model_extra == {"expected_status": 200, "min_chars": 1500}
+
+
+def test_page_signal_keywords_are_mutually_exclusive() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        PageSignal(
+            type="t",
+            description="d",
+            required_keywords=("обязательно",),
+            prohibited_keywords=("запрещено",),
+        )
+    assert "mutually exclusive" in str(exc_info.value)
+
+
+def test_site_signal_keywords_are_mutually_exclusive() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        SiteSignal(
+            type="t",
+            description="d",
+            required_keywords=("обязательно",),
+            prohibited_keywords=("запрещено",),
+        )
+    assert "mutually exclusive" in str(exc_info.value)
+
+
+def test_page_signal_only_prohibited_keywords_is_valid() -> None:
+    sig = PageSignal(type="t", description="d", prohibited_keywords=("купить табак",))
+    assert sig.prohibited_keywords == ("купить табак",)
+    assert sig.required_keywords == ()
+
+
+def test_violation_applicability_accepts_known_tags() -> None:
+    sig = PageSignal(type="t", description="d", html_patterns=("div",))
+    v = Violation(
+        id="v-1",
+        article="ст. 1",
+        title="t",
+        severity="low",
+        description="d",
+        detection=Detection(page_signals=(sig,)),
+        recommendation="fix",
+        applicability=("payments", "has_signing"),
+    )
+    assert v.applicability == ("payments", "has_signing")
+
+
+def test_violation_applicability_rejects_unknown_tag() -> None:
+    sig = PageSignal(type="t", description="d", html_patterns=("div",))
+    with pytest.raises(ValidationError):
+        Violation(
+            id="v-1",
+            article="ст. 1",
+            title="t",
+            severity="low",
+            description="d",
+            detection=Detection(page_signals=(sig,)),
+            recommendation="fix",
+            applicability=("not_a_real_tag",),  # type: ignore[arg-type]
+        )
+
+
+def test_violation_applicability_defaults_to_empty_tuple() -> None:
+    v = _make_violation()
+    assert v.applicability == ()
 
 
 def test_corpus_bundle_indexes_built() -> None:

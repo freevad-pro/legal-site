@@ -13,7 +13,9 @@ import pytest
 from app.checks import (
     REGISTRY,
     CheckResult,
+    _check_pattern_contains_prohibited,
     _check_pattern_with_escape,
+    _check_prohibited_keywords,
     _find_policy_url,
     _not_implemented,
     aggregate_or,
@@ -300,6 +302,252 @@ def test_aggregate_or_priority() -> None:
     assert aggregate_or([CheckResult(status="pass"), CheckResult(status="pass")]).status == "pass"
 
 
+def test_aggregate_or_fail_carries_evidence_from_first_fail() -> None:
+    result = aggregate_or(
+        [
+            CheckResult(status="inconclusive", inconclusive_reason="check_not_implemented"),
+            CheckResult(status="fail", evidence="first-bad", explanation="bad #1"),
+            CheckResult(status="fail", evidence="second-bad", explanation="bad #2"),
+        ]
+    )
+    assert result.status == "fail"
+    assert result.evidence == "first-bad"
+    assert result.explanation == "bad #1"
+    assert result.inconclusive_reason is None
+
+
+def test_aggregate_or_real_inconclusive_wins_over_stub_when_stub_first() -> None:
+    """Stub (check_not_implemented) стоит первым, реальный inconclusive — вторым.
+    Итог: reason от реального, чтобы порядок sub_signals не определял видимость
+    finding'а в отчёте (см. ADR-0003)."""
+    result = aggregate_or(
+        [
+            CheckResult(
+                status="inconclusive",
+                explanation="stub",
+                inconclusive_reason="check_not_implemented",
+            ),
+            CheckResult(
+                status="inconclusive",
+                explanation="real",
+                inconclusive_reason="evidence_missing",
+            ),
+        ]
+    )
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "evidence_missing"
+    assert result.explanation == "real"
+
+
+def test_aggregate_or_real_inconclusive_wins_over_stub_when_stub_last() -> None:
+    """Симметричный случай — реальный inconclusive первым."""
+    result = aggregate_or(
+        [
+            CheckResult(
+                status="inconclusive",
+                explanation="real",
+                inconclusive_reason="evidence_missing",
+            ),
+            CheckResult(
+                status="inconclusive",
+                explanation="stub",
+                inconclusive_reason="check_not_implemented",
+            ),
+        ]
+    )
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "evidence_missing"
+
+
+def test_aggregate_or_all_stubs_returns_check_not_implemented() -> None:
+    """Все sub-результаты — заглушки → итог inconclusive с reason=check_not_implemented.
+    Engine скрывает такие findings из отчёта."""
+    result = aggregate_or(
+        [
+            CheckResult(
+                status="inconclusive",
+                explanation="stub a",
+                inconclusive_reason="check_not_implemented",
+            ),
+            CheckResult(
+                status="inconclusive",
+                explanation="stub b",
+                inconclusive_reason="check_not_implemented",
+            ),
+        ]
+    )
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "check_not_implemented"
+
+
+def test_aggregate_or_empty_returns_evidence_missing() -> None:
+    result = aggregate_or([])
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "evidence_missing"
+
+
+def test_check_result_validator_rejects_reason_without_inconclusive_status() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError) as exc_info:
+        CheckResult(status="fail", inconclusive_reason="check_not_implemented")
+    assert "only valid for inconclusive" in str(exc_info.value)
+
+
+# ----- prohibited_keywords ----- #
+
+
+def test_check_prohibited_keywords_fail_on_match() -> None:
+    artifacts = _artifacts(html="<html><body>Купить табак онлайн прямо сейчас!</body></html>")
+    result = _check_prohibited_keywords(("купить табак",), artifacts)
+    assert result.status == "fail"
+    assert result.evidence == "купить табак"
+
+
+def test_check_prohibited_keywords_case_insensitive() -> None:
+    artifacts = _artifacts(html="<html><body>КУПИТЬ ТАБАК!</body></html>")
+    assert _check_prohibited_keywords(("купить табак",), artifacts).status == "fail"
+
+
+def test_check_prohibited_keywords_pass_when_none_present() -> None:
+    artifacts = _artifacts(html="<html><body>Обычный новостной текст</body></html>")
+    result = _check_prohibited_keywords(("купить табак", "купить сигареты"), artifacts)
+    assert result.status == "pass"
+
+
+def test_check_prohibited_keywords_skips_script_and_style() -> None:
+    """Слово в `<script>` или `<style>` не считается видимым контентом."""
+    html = "<html><body><script>купить табак</script><p>чистый текст</p></body></html>"
+    assert _check_prohibited_keywords(("купить табак",), _artifacts(html=html)).status == "pass"
+
+
+def test_check_prohibited_keywords_ignores_empty_keywords() -> None:
+    artifacts = _artifacts(html="<html><body>текст</body></html>")
+    assert _check_prohibited_keywords(("", "  "), artifacts).status == "pass"
+
+
+def test_evaluate_prohibited_keywords_branch() -> None:
+    signal = PageSignal(
+        type="prohibited_goods",
+        description="d",
+        prohibited_keywords=("купить табак",),
+    )
+    artifacts = _artifacts(html="<html><body>Купить табак онлайн дёшево.</body></html>")
+    result = evaluate(signal, artifacts)
+    assert result.status == "fail"
+    assert result.evidence == "купить табак"
+
+
+def test_evaluate_prohibited_keywords_pass() -> None:
+    signal = PageSignal(
+        type="prohibited_goods",
+        description="d",
+        prohibited_keywords=("купить табак",),
+    )
+    artifacts = _artifacts(html="<html><body>безопасный контент</body></html>")
+    assert evaluate(signal, artifacts).status == "pass"
+
+
+# ----- _check_pattern_contains_prohibited (контекстный prohibited) ----- #
+
+
+def test_pattern_contains_prohibited_no_trigger_returns_pass() -> None:
+    """Триггерный селектор не сматчился → pass: повод для проверки не возник."""
+    artifacts = _artifacts(html="<html><body><p>BUY NOW сейчас</p></body></html>")
+    result = _check_pattern_contains_prohibited(
+        ("button", 'a[class*="btn" i]'),
+        ("BUY NOW",),
+        artifacts,
+    )
+    assert result.status == "pass"
+
+
+def test_pattern_contains_prohibited_keyword_inside_trigger_fails() -> None:
+    """Триггер сматчился И содержит ключ → fail с указанием селектора."""
+    html = '<html><body><button class="cta">BUY NOW</button></body></html>'
+    result = _check_pattern_contains_prohibited(
+        ("button",),
+        ("BUY NOW",),
+        _artifacts(html=html),
+    )
+    assert result.status == "fail"
+    assert result.evidence == "BUY NOW"
+    assert "button" in (result.explanation or "")
+
+
+def test_pattern_contains_prohibited_trigger_without_keyword_passes() -> None:
+    """Триггер сматчился, но ключ внутри отсутствует → pass."""
+    html = "<html><body><button>Войти</button><p>BUY NOW в произвольном тексте</p></body></html>"
+    result = _check_pattern_contains_prohibited(
+        ("button",),
+        ("BUY NOW",),
+        _artifacts(html=html),
+    )
+    # Ключ есть в <p>, но искали только внутри <button> → pass.
+    assert result.status == "pass"
+
+
+def test_pattern_contains_prohibited_case_insensitive() -> None:
+    html = '<html><body><button>buy now</button></body></html>'
+    result = _check_pattern_contains_prohibited(
+        ("button",),
+        ("BUY NOW",),
+        _artifacts(html=html),
+    )
+    assert result.status == "fail"
+
+
+def test_pattern_contains_prohibited_searches_multiple_patterns() -> None:
+    """Проверяем все элементы со всех селекторов; first-match по порядку."""
+    html = (
+        "<html><body>"
+        '<button>Войти</button>'
+        '<div class="banner-hero">SALE</div>'
+        "</body></html>"
+    )
+    result = _check_pattern_contains_prohibited(
+        ("button", '[class*="banner" i]'),
+        ("SALE", "BUY NOW"),
+        _artifacts(html=html),
+    )
+    assert result.status == "fail"
+    assert result.evidence == "SALE"
+
+
+def test_pattern_contains_prohibited_ignores_empty_keywords() -> None:
+    html = '<html><body><button>Click</button></body></html>'
+    result = _check_pattern_contains_prohibited(
+        ("button",),
+        ("", "   "),
+        _artifacts(html=html),
+    )
+    assert result.status == "pass"
+
+
+def test_evaluate_routes_html_patterns_plus_prohibited_to_contextual_branch() -> None:
+    """В `evaluate` пара html_patterns+prohibited_keywords (без required_absent)
+    должна идти через `_check_pattern_contains_prohibited` — фраза «BUY NOW»
+    в обычном `<p>` НЕ должна давать fail, только внутри `<button>`."""
+    signal = PageSignal(
+        type="button_only_english",
+        description="d",
+        html_patterns=("button",),
+        prohibited_keywords=("BUY NOW",),
+    )
+    # Слово только в <p>, не в <button> → pass.
+    result_pass = evaluate(
+        signal,
+        _artifacts(html="<html><body><p>BUY NOW сейчас</p><button>Купить</button></body></html>"),
+    )
+    assert result_pass.status == "pass"
+    # Слово в <button> → fail.
+    result_fail = evaluate(
+        signal,
+        _artifacts(html='<html><body><button class="cta">BUY NOW</button></body></html>'),
+    )
+    assert result_fail.status == "fail"
+
+
 # ----- combine, неизвестный check, реестр ----- #
 
 
@@ -312,6 +560,37 @@ def test_combine_signal_returns_inconclusive() -> None:
     result = evaluate(signal, _artifacts())
     assert result.status == "inconclusive"
     assert "combine" in (result.explanation or "")
+    assert result.inconclusive_reason == "check_not_implemented"
+
+
+def test_text_trigger_with_escape_returns_context_dependent() -> None:
+    """ADR-0003 Q4: пара `required_keywords + required_absent` без html_patterns —
+    семантический сигнал «если упомянуто X, должно быть Y». Детерминированный
+    обработчик дал бы ложные fail (OR через два независимых поля); вместо этого
+    возвращаем inconclusive(context_dependent), engine скрывает это до LLM."""
+    signal = PageSignal(
+        type="bad_no_disclaimer",
+        description="БАД без дисклеймера",
+        required_keywords=("БАД",),
+        required_absent=("не лекарство",),
+    )
+    result = evaluate(signal, _artifacts(html="<html><body>купите наш БАД</body></html>"))
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "context_dependent"
+
+
+def test_text_trigger_with_escape_with_html_patterns_uses_normal_logic() -> None:
+    """Если html_patterns заданы — это `_check_pattern_with_escape`, не Q4."""
+    signal = PageSignal(
+        type="bad_card_no_disclaimer",
+        description="БАД в карточке без дисклеймера",
+        html_patterns=("article",),
+        required_keywords=("БАД",),
+        required_absent=("не лекарство",),
+    )
+    result = evaluate(signal, _artifacts(html="<html><body><p>plain text</p></body></html>"))
+    # context_dependent выдаваться НЕ должен — html_patterns включает обычную ветку
+    assert result.inconclusive_reason != "context_dependent"
 
 
 def test_unknown_check_returns_inconclusive() -> None:
@@ -323,6 +602,7 @@ def test_unknown_check_returns_inconclusive() -> None:
     result = evaluate(signal, _artifacts())
     assert result.status == "inconclusive"
     assert "unknown check" in (result.explanation or "")
+    assert result.inconclusive_reason == "check_not_implemented"
 
 
 def test_registry_contains_expected_names() -> None:
@@ -354,6 +634,7 @@ def test_stub_returns_inconclusive() -> None:
     result = _not_implemented(signal, _artifacts())
     assert result.status == "inconclusive"
     assert "rkn_registry_lookup" in (result.explanation or "")
+    assert result.inconclusive_reason == "check_not_implemented"
 
 
 # ----- _find_policy_url ----- #

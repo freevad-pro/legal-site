@@ -72,6 +72,7 @@
 | 5 | Выбор и согласование дизайна UI | Утверждены стиль, палитра, мокапы 3 экранов; пользователь подтвердил | ✅ Done | [iteration-05-design.md](tasks/iteration-05-design.md) |
 | 5а | Auth refactor: форма входа и разделение free/LLM | API на cookie-сессиях; `POST /scans` принимает `with_llm`, без сессии для `with_llm=true` — 401 | ✅ Done | [iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | ✅ Done | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
+| 6б | Контекстный гейтинг и инверсная логика детекции | Убрать ложные срабатывания через `applicability`-теги, поле `prohibited_keywords` и фильтрацию заглушек в отчёте | ✅ Done | [iteration-06b-detection-fixes.md](tasks/iteration-06b-detection-fixes.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
 | 8 | Production-деплой на Beget VPS | Приложение поднято на VPS под HTTPS | 📋 Planned | [iteration-08-deploy.md](tasks/iteration-08-deploy.md) |
 
@@ -294,13 +295,57 @@
 
 ---
 
+### Итерация 6б: Контекстный гейтинг и инверсная логика детекции
+
+**Цель:** устранить системные ложные срабатывания детерминированного сканера, выявленные при прогоне по `https://habr.com/ru/feed/` (73 fail, большинство нерелевантны). Закрыть детерминированный слой до уровня «отчёт можно показать пользователю без оговорок про шум», до подключения LLM в итерации 7.
+
+**Стартовый контекст:** [docs/tasks/iteration-06b-detection-fixes.md](tasks/iteration-06b-detection-fixes.md) — полный план с архитектурными решениями Р1–Р5, разбором 4 жалоб из исходного отчёта, mental-сценариями и known issues; [docs/laws/schema.md](laws/schema.md) (поля `applies_to`, формат detection); [app/checks.py](../app/checks.py), [app/engine.py](../app/engine.py), [app/corpus/models.py](../app/corpus/models.py).
+
+**Корневые причины (из разбора прогона по habr.com):**
+
+- Нет контекстного гейтинга — все 100 нарушений проверяются на любом сайте, включая нарушения о платежах, e-commerce, рекламе БАД на блог-сайтах.
+- Инверсная семантика `required_keywords` для запрещённых ключей (`'купить табак'` срабатывает по их отсутствию — инверсия логики).
+- Семантически случайные привязки sub-signals (CSP-заголовок → «утечка ПДн», ключевое слово «DPO» → «несвоевременное уведомление об инциденте»).
+- 21 «Не определено» от 11 нереализованных заглушек, засоряющих отчёт.
+
+**Критерии завершения (DoD):**
+
+- В схему корпуса введено опциональное поле `applicability: tuple[ContextTag, ...]` на уровне Violation (закрытый словарь из 7 тегов: `ecommerce`, `payments`, `ad_content`, `ugc`, `media_18plus`, `child_audience`, `has_signing`). AND-семантика; пустой = «применимо всегда».
+- В `PageSignal`/`SiteSignal` добавлено поле `prohibited_keywords` + универсальный обработчик `_check_prohibited_keywords` (fail при наличии ключа); Pydantic-валидатор запрещает совместное использование с `required_keywords`.
+- В `CheckResult` и `Finding` добавлено поле `inconclusive_reason` (`check_not_implemented` / `context_dependent` / `evidence_missing`). `aggregate_or` различает stub-inconclusive и real-inconclusive с приоритетом real над stub.
+- Новый модуль `app/context.py` с `ScanContext`, `detect_context` и 7 контекст-детекторами; парсинг HTML делается один раз и переиспользуется.
+- `_evaluate_violation` возвращает `Finding | None`: `None` если нарушение не применимо к контексту ИЛИ если итог inconclusive + `check_not_implemented`. `run_scan` пропускает None из findings и SSE.
+- В корпусе удалены 2 семантически нерелевантных sub-signals (`152-fz-incident-notification-missed.dpo_contact_missing`, `152-fz-data-breach.weak_security_headers`).
+- 15 файлов корпуса размечены `applicability`-тегами по таблице из tasklist'а; инверсные `required_keywords` мигрированы на `prohibited_keywords` (3 случая в 38-ФЗ + 4 случая в 436-ФЗ).
+- Новый ADR-0003 `docs/adr/0003-context-gating-and-inverse-keywords.md`.
+- Regression-тест `tests/test_engine_regression.py` на фикстуре `habr-like-blog.html`: `failed_findings <= 10`, нет финдингов из 161-ФЗ/54-ФЗ/pp-2463, нет inconclusive с `check_not_implemented`.
+- Ручной прогон по `https://habr.com/ru/feed/`: было 73 fail → стало ≤ 10 fail.
+
+**Связь с tasklist:** [tasks/iteration-06b-detection-fixes.md](tasks/iteration-06b-detection-fixes.md)
+
+**Полезный результат:** отчёт сканера перестаёт быть «шумной кучей» для нерелевантных сайтов — контекст определяет, какие нарушения применимы. Детерминированный слой становится контрактом, на который надёжно встраивается LLM в итерации 7.
+
+**Артефакты:** новый `app/context.py`; правки `app/corpus/models.py`, `app/checks.py`, `app/engine.py`; 15 файлов `docs/laws/*.md` (разметка `applicability`, миграция инверсных ключей); `docs/laws/schema.md` (новые поля и словари); `docs/adr/0003-context-gating-and-inverse-keywords.md`; новые тесты `tests/test_context.py`, `tests/test_engine_regression.py` + 3 HTML-фикстуры; `frontend/src/lib/types.ts` (поле `inconclusive_reason` в TS-интерфейсе Finding).
+
+**Демо (прогон по `https://habr.com/ru/feed/`):** total findings 100 → 32, fail 71 → 23 (-68%). Из 23 оставшихся: 7 — known issue `gk-rf-part-iv` (гиперширокие селекторы, отложено в итерацию 7), 16 — реальные применимые проверки (политика ПДн, GA без локализации, госязык, UGC-реестр). Все 4 исходные жалобы пользователя (DPO, CSP, эквайринг, missing-keywords запрещёнки) ушли. Гейтинг 161-ФЗ / 54-ФЗ / pp-2463 / 63-ФЗ / `gk-rf-offer` — 0 утечек. Заглушки и `context_dependent` — 0 в отчёте. Метрика «≤ 10 fail» не достигнута, но качественный состав остатка — реальные срабатывания, не шум.
+
+**Открытое:** на старте этапа 6 миграции корпуса решаются open questions 1–6 из tasklist'а (граница тегов `ad_content`/`ugc`/`has_signing`, подход к «текстовому триггер+эскейп» в 38-ФЗ, тонкая настройка детектора `_detect_has_signing`).
+
+**Известные ограничения, остающиеся после итерации (закрываются только LLM в итерации 7):**
+
+- На медиа-сайтах со статьями про регулируемые товары (БАД, VPN, кредиты) тег `ad_content` активируется → `prohibited_keywords` может дать false positive «статья ≠ реклама».
+- Аналогичная проблема для контентных запретов 436-ФЗ (`'ЛГБТ'`, `'наркотик'`, `'способы суицида'` в новостной статье — не пропаганда).
+- Гиперширокие селекторы в `gk-rf-part-iv-copyright.md` (`img[src^="https://"]`, `title`, `link[href*="fonts"]`) — отдельный класс проблем, точечная ревизия отложена.
+
+---
+
 ### Итерация 7: Гибридное LLM-покрытие
 
 **Цель:** довести покрытие нарушений до ~90–95% за счёт семантических check-функций через GigaChat (primary) и YandexGPT (фоллбек).
 
-**⚡ Параллельность:** может вестись **параллельно с итерацией 6**. Контракт `LLMProvider` и SQLite-кэш не зависят от UI; полный корпус уже готов с итерации 1 — отдельных предусловий нет.
+**Предусловие:** итерация 6б закрыта. Контекстный гейтинг, `prohibited_keywords` и `inconclusive_reason` уже введены и работают — LLM-проверки заменяют заглушки (`rkn_registry_lookup`, `tls_audit`, `internal_documents_audit` и др.), которые в 6б скрыты, и закрывают остаточные false positives «контент ≠ реклама» для медиа-сайтов с `ad_content`-контекстом. Без 6б LLM работала бы поверх шумного детерминированного слоя и не имела бы стабильной точки замены заглушек.
 
-**Стартовый контекст:** [vision.md](vision.md) — раздел «Работа с LLM» целиком (интерфейс провайдера, промпты, нормализация контента, ключ кэша, бюджет токенов, особенности GigaChat, обработка ошибок); [laws/schema.md](laws/schema.md) — поле `check` в детекции (расширение под semantic-проверки потребует ADR).
+**Стартовый контекст:** [vision.md](vision.md) — раздел «Работа с LLM» целиком (интерфейс провайдера, промпты, нормализация контента, ключ кэша, бюджет токенов, особенности GigaChat, обработка ошибок); [laws/schema.md](laws/schema.md) — поле `check` в детекции, контракт `applicability` и `prohibited_keywords` из 6б (расширение под semantic-проверки потребует ADR); [docs/tasks/iteration-06b-detection-fixes.md](tasks/iteration-06b-detection-fixes.md) — раздел «Не делаем в этой итерации» с явным списком, что LLM должна закрыть.
 
 **Критерии завершения (DoD):**
 - Семантические check-функции вызываются движком **только если** `ScanState.with_llm == True` (контракт зафиксирован в итерации 5а). Без флага — пропускаются молча, в SSE/finding'и не публикуются.
@@ -321,6 +366,12 @@
 **Полезный результат:** реальное покрытие законодательных требований выросло до уровня, при котором отчёт можно показывать клиенту/руководству без оговорок «детектор не нашёл — но может быть».
 
 **Артефакты:** `app/llm/`, `prompts/*.md`, новый ADR в `docs/adr/`, изменения в `docs/laws/schema.md` и затронутых файлах корпуса.
+
+**Открытое после 6б:**
+
+- **Гибрид free + with_llm для 6 sub-signals «текстовый триггер + эскейп» в 38-ФЗ.** В 6б (open question 4) выбран минимальный путь — детерминированный движок возвращает `inconclusive_reason="context_dependent"` и engine скрывает эти findings из отчёта в обоих режимах. После реализации LLM в итерации 7 пересмотреть: нужен ли отдельный fallback-обработчик `_check_keyword_trigger_with_escape` для free-режима (детерминированный сигнал с шумом «контент ≠ реклама»), или достаточно того, что with_llm-режим закрывает эти sub-signals семантически, а free-юзер получает по ним тишину. Решение принять по статистике использования free-режима и feedback'у пользователей. Sub-signals: `38-fz-misleading-claims.superlative_without_proof`, `38-fz-misleading-claims.unverifiable_specific_claims`, `38-fz-bad-no-disclaimer.bad_product_card_no_disclaimer`, `38-fz-financial-services-no-disclosure.credit_ad_no_psk`, `38-fz-financial-services-no-disclosure.credit_ad_no_warning`, `38-fz-foreign-words-untranslated.excessive_foreign_words_in_ads`.
+- **Метрика «fail ≤ 10» на habr.com из 6б не достигнута (по факту 23, или 16 без `gk-rf-part-iv` known issue).** Дальнейшее снижение требует либо LLM-проверок (отличать «политика есть, но неполная» от «политики нет», закрывать гиперширокие селекторы в `gk-rf-part-iv` семантикой), либо точечной переразметки корпуса с риском потерять охват на других сайтах. Подробности — в [docs/tasks/iteration-06b-detection-fixes.md](tasks/iteration-06b-detection-fixes.md) (раздел «Что не достигнуто и переносится дальше», пункты 1–3). На старте итерации 7 решить: оставить ли остаточные «честные» fails как есть (объяснимое поведение детерминированного слоя) или закрывать через LLM.
+- **Гиперширокие селекторы в `gk-rf-part-iv-copyright`** (`img[src^="https://"]`, `title`, `link[href*="fonts"]`) — 7 fails на любом сайте. В 6б отмечены как known issue в [docs/adr/0003-context-gating-and-inverse-keywords.md](adr/0003-context-gating-and-inverse-keywords.md). В итерации 7 заменить на семантические LLM-проверки («есть ли на изображениях указание лицензии», «использует ли сайт чужой бренд в title как ключевой») либо удалить нарушения с пометкой «недетектируемо без многостраничной семантики».
 
 ---
 

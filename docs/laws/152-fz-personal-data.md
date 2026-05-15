@@ -482,11 +482,6 @@ violations:
         - type: incident_response_procedure_missing
           description: "В локальных актах оператора нет регламента реагирования на инциденты с ПДн"
           check: internal_documents_audit
-        - type: dpo_contact_missing
-          description: "На сайте нет контакта ответственного за обработку ПДн"
-          required_keywords:
-            - "ответственный за обработку"
-            - "DPO"
 
     penalties:
       - subject: citizen
@@ -541,11 +536,6 @@ violations:
           html_patterns:
             - 'form[action^="http://"]'
           required_protocol: "https"
-        - type: weak_security_headers
-          description: "Отсутствуют заголовки Strict-Transport-Security, Content-Security-Policy"
-          required_headers:
-            - "Strict-Transport-Security"
-            - "Content-Security-Policy"
       site_signals:
         - type: public_database_endpoint
           description: "Открытые эндпоинты с PD (например, /api/users без авторизации)"

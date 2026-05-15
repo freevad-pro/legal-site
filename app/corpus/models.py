@@ -21,6 +21,15 @@ AppliesTo = Literal[
     "all_websites", "ecommerce", "landing", "blog", "media", "service", "gov", "b2b"
 ]
 LawCategory = Literal["privacy", "cookies", "advertising", "consumer", "info", "copyright"]
+ContextTag = Literal[
+    "ecommerce",
+    "payments",
+    "ad_content",
+    "ugc",
+    "media_18plus",
+    "child_audience",
+    "has_signing",
+]
 EvidenceTemplate = Literal[
     "footer_no_policy",
     "form_no_consent",
@@ -74,8 +83,18 @@ class PageSignal(BaseModel):
     html_patterns: tuple[str, ...] = ()
     required_absent: tuple[str, ...] = ()
     required_keywords: tuple[str, ...] = ()
+    prohibited_keywords: tuple[str, ...] = ()
     required_headers: tuple[str, ...] = ()
     required_protocol: str | None = None
+
+    @model_validator(mode="after")
+    def _keywords_are_mutually_exclusive(self) -> PageSignal:
+        if self.required_keywords and self.prohibited_keywords:
+            raise ValueError(
+                "required_keywords and prohibited_keywords are mutually exclusive "
+                "on a single signal"
+            )
+        return self
 
 
 class SiteSignal(BaseModel):
@@ -87,6 +106,16 @@ class SiteSignal(BaseModel):
     description: str
     check: str | None = None
     required_keywords: tuple[str, ...] = ()
+    prohibited_keywords: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def _keywords_are_mutually_exclusive(self) -> SiteSignal:
+        if self.required_keywords and self.prohibited_keywords:
+            raise ValueError(
+                "required_keywords and prohibited_keywords are mutually exclusive "
+                "on a single signal"
+            )
+        return self
 
 
 class Detection(BaseModel):
@@ -117,6 +146,7 @@ class Violation(BaseModel):
     recommendation: str
     references: tuple[str, ...] = ()
     evidence_template: EvidenceTemplate | None = None
+    applicability: tuple[ContextTag, ...] = ()
 
 
 class ReviewLogEntry(BaseModel):

@@ -97,6 +97,11 @@ violations:
             - "процентов клиентов"
             - "гарантируем"
             - "100%"
+          required_absent:
+            - "источник"
+            - "по данным"
+            - "согласно исследованию"
+            - "*"
 
     penalties:
       - subject: citizen
@@ -160,7 +165,7 @@ violations:
             - '[class*="hero" i]'
             - '[class*="promo" i]'
             - '[class*="sale" i]'
-          required_keywords:
+          prohibited_keywords:
             - "SALE"
             - "NEW"
             - "BLACK FRIDAY"
@@ -171,6 +176,13 @@ violations:
           html_patterns:
             - 'button'
             - 'a[class*="btn" i]'
+          prohibited_keywords:
+            - "BUY NOW"
+            - "ORDER NOW"
+            - "SIGN UP"
+            - "SUBSCRIBE"
+            - "ADD TO CART"
+            - "GET STARTED"
 
     penalties:
       - subject: citizen
@@ -204,6 +216,7 @@ violations:
     article: "38-ФЗ, ст. 5 ч. 9"
     title: "Скрытая реклама / нативная реклама без пометки «реклама»"
     severity: high
+    applicability: [ad_content]
     description: |
       Скрытая реклама — реклама, оказывающая неосознаваемое потребителями
       воздействие на их сознание. На сайтах сюда относят нативные публикации
@@ -274,6 +287,7 @@ violations:
     article: "38-ФЗ, ст. 7"
     title: "Реклама запрещённых товаров: наркотики, табак, оружие, незарегистрированные лекарства"
     severity: critical
+    applicability: [ad_content]
     description: |
       Ст. 7 38-ФЗ полностью запрещает рекламу: (1) товаров, производство и оборот
       которых запрещены законом; (2) наркотических средств, психотропных веществ
@@ -291,7 +305,7 @@ violations:
       page_signals:
         - type: prohibited_keywords_in_content
           description: "На страницах сайта встречаются прямые упоминания и продажа запрещённых к рекламе категорий"
-          required_keywords:
+          prohibited_keywords:
             - "купить табак"
             - "купить сигареты"
             - "электронные сигареты купить"
@@ -305,7 +319,7 @@ violations:
             - "написать диплом на заказ"
         - type: unregistered_medicine_ad
           description: "Реклама лекарственного средства без указания регистрационного удостоверения / без статуса БАД"
-          required_keywords:
+          prohibited_keywords:
             - "лечит"
             - "вылечит"
             - "от всех болезней"
@@ -361,6 +375,7 @@ violations:
     article: "38-ФЗ, ст. 25 ч. 1 п. 7"
     title: "Реклама БАД без обязательного предупреждения «БАД — не лекарство»"
     severity: high
+    applicability: [ad_content]
     description: |
       Реклама биологически активных добавок (БАД) должна в каждом случае
       сопровождаться предупреждением о том, что объект рекламирования
@@ -388,7 +403,7 @@ violations:
             - "БАД. Не является"
         - type: bad_therapeutic_claims
           description: "Описание БАД содержит указания на лечебные свойства"
-          required_keywords:
+          prohibited_keywords:
             - "лечит"
             - "избавит от"
             - "вылечит"
@@ -434,6 +449,7 @@ violations:
     article: "38-ФЗ, ст. 28"
     title: "Реклама финансовых услуг без существенных условий / без указания ПСК"
     severity: high
+    applicability: [ad_content]
     description: |
       Реклама услуг, связанных с предоставлением и обслуживанием кредита (займа),
       обязана: (1) содержать наименование/индивидуализирующее обозначение лица,
@@ -519,6 +535,7 @@ violations:
     article: "38-ФЗ, ст. 6; ст. 5 ч. 6"
     title: "Использование образов несовершеннолетних в рекламе товаров не для детей / реклама, эксплуатирующая детскую аудиторию"
     severity: medium
+    applicability: [ad_content]
     description: |
       В рекламе не допускается: дискредитация родителей; побуждение детей
       убедить родителей приобрести товар; создание у детей искажённого
@@ -541,7 +558,7 @@ violations:
             - 'img[alt*="kid" i]'
         - type: ad_targeting_kids_to_pressure_parents
           description: "Текст обращён к ребёнку с призывом «попроси у мамы»"
-          required_keywords:
+          prohibited_keywords:
             - "попроси маму"
             - "попроси папу"
             - "скажи родителям"

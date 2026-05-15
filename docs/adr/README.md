@@ -23,6 +23,8 @@
 ## Индекс
 
 - [0001-laws-reference-structure.md](0001-laws-reference-structure.md) — Структура и формат справочника российского законодательства для проверки сайтов.
+- [0002-corpus-ui-fields.md](0002-corpus-ui-fields.md) — Расширение схемы корпуса полями для UI (`category`, `icon`, `short_description`, `evidence_template`).
+- [0003-context-gating-and-inverse-keywords.md](0003-context-gating-and-inverse-keywords.md) — Контекстный гейтинг нарушений через `applicability` и инверсная семантика `prohibited_keywords`; скрытие заглушек через `inconclusive_reason`.
 
 ## Когда добавлять новый ADR
 

@@ -107,6 +107,7 @@ violations:
     article: "436-ФЗ, ст. 6, ст. 7-10"
     title: "Неправильная возрастная маркировка (несоответствие контенту)"
     severity: high
+    applicability: [media_18plus]
     description: |
       Маркировка должна соответствовать критериям ст. 7–10. Размещение
       материалов с насилием, эротикой, нецензурной бранью под маркировкой
@@ -116,7 +117,7 @@ violations:
       page_signals:
         - type: adult_keywords_under_low_age_marking
           description: "На странице с низкой маркировкой обнаружены признаки контента более высокого уровня"
-          required_keywords: ["эротика", "ставки", "казино", "наркотики", "алкоголь", "табак"]
+          prohibited_keywords: ["эротика", "ставки", "казино", "наркотики", "алкоголь", "табак"]
       site_signals:
         - type: no_classification_documentation
           description: "У оператора нет внутреннего акта о порядке классификации"
@@ -138,6 +139,7 @@ violations:
     article: "436-ФЗ, ст. 5 ч. 2; ст. 14"
     title: "Контент 18+ без проверки возраста (отсутствие age gate)"
     severity: critical
+    applicability: [media_18plus]
     description: |
       Информация, запрещённая для детей (ст. 5 ч. 2), должна быть закрыта
       от несовершеннолетних. Для сайта это означает обязательный возрастной
@@ -206,7 +208,7 @@ violations:
       page_signals:
         - type: lgbt_propaganda_keywords
           description: "Словарные маркеры (требуется экспертная оценка контекста)"
-          required_keywords: ["ЛГБТ", "однополые отношения", "смена пола", "трансгендер"]
+          prohibited_keywords: ["ЛГБТ", "однополые отношения", "смена пола", "трансгендер"]
         - type: lgbt_imagery
           description: "Изображения радужного флага в продвигающем контексте"
           html_patterns: ['img[alt*="rainbow" i]', 'img[alt*="pride" i]']
@@ -240,6 +242,7 @@ violations:
     article: "436-ФЗ, ст. 5; 38-ФЗ, ст. 6, ст. 21-23, 27"
     title: "Реклама алкоголя, табака, азартных игр на сайтах с маркировкой 0+/6+/12+/16+"
     severity: high
+    applicability: [media_18plus]
     description: |
       Реклама алкоголя в интернете запрещена (ст. 21 38-ФЗ), реклама табака
       и систем нагревания — запрещена везде (ст. 23), реклама ставок и
@@ -294,10 +297,10 @@ violations:
       page_signals:
         - type: suicide_promotion_keywords
           description: "Маркеры призыва к суициду / самоповреждению"
-          required_keywords: ["способы суицида", "как покончить", "selfharm"]
+          prohibited_keywords: ["способы суицида", "как покончить", "selfharm"]
         - type: drug_usage_instructions
           description: "Инструкции по приготовлению/употреблению наркотиков"
-          required_keywords: ["способ употребления", "как приготовить", "наркотик"]
+          prohibited_keywords: ["способ употребления", "как приготовить", "наркотик"]
         - type: profanity_in_content
           description: "Нецензурная брань без цензурирования"
           check: profanity_filter

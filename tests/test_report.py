@@ -77,11 +77,30 @@ def test_render_pdf_produces_pdf_bytes() -> None:
 
 @_skip_no_weasyprint
 def test_render_pdf_embeds_dejavu_font() -> None:
+    import re
+    import zlib
+
     from app.report.renderer import render_pdf
 
     pdf = asyncio.run(render_pdf(_sample_result()))
-    # WeasyPrint встраивает шрифт; имя DejaVu проявляется в потоке PDF.
-    assert b"DejaVu" in pdf, "bundled DejaVu font is not embedded — Cyrillic may break"
+    # WeasyPrint в PDF 1.7 пакует объекты в Object Streams + FlateDecode —
+    # имена шрифтов оказываются не в plain-text, а в zlib-сжатых блоках.
+    # Распаковываем все streams и собираем содержимое для поиска.
+    decoded_blobs: list[bytes] = []
+    for match in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", pdf, flags=re.DOTALL):
+        try:
+            decoded_blobs.append(zlib.decompress(match.group(1)))
+        except zlib.error:
+            continue
+    decoded = b"".join(decoded_blobs)
+
+    # (1) В PDF встроен реальный TTF-стрим (FontFile2 — TrueType font descriptor key).
+    assert b"FontFile2" in decoded, "no TTF font embedded — bundled @font-face не подключился"
+    # (2) Шрифт встроен под нашим CSS-именем ReportSans (оригинальное «DejaVu»
+    # WeasyPrint затирает при subset'инге, поэтому имя файла в PDF не ищем).
+    assert b"ReportSans" in decoded, (
+        "bundled ReportSans (DejaVu) не embed'нут — кириллица сломается"
+    )
 
 
 def test_render_pdf_contains_cyrillic_title() -> None:

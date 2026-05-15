@@ -53,7 +53,15 @@ def _render_sync(result: ScanResult) -> bytes:
         counts=counts,
         sections=_section_buckets(result),
     )
-    return HTML(string=html_str, base_url=str(_TEMPLATES_DIR)).write_pdf()  # type: ignore[no-any-return]
+    # base_url — file:///-URI с trailing slash. Без trailing slash urljoin
+    # обрабатывает «templates» как файл, и `../fonts/*.ttf` резолвится на
+    # уровень выше нужного (app/fonts/ вместо app/report/fonts/); WeasyPrint
+    # не находит .ttf и тихо пропускает @font-face — PDF рендерится без
+    # bundled DejaVu, кириллица ломается.
+    return HTML(  # type: ignore[no-any-return]
+        string=html_str,
+        base_url=_TEMPLATES_DIR.as_uri() + "/",
+    ).write_pdf()
 
 
 async def render_pdf(result: ScanResult) -> bytes:

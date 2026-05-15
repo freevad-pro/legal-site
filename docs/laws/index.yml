@@ -3,7 +3,7 @@
 # Не править руками — пересборка: python tools/rebuild_index.py
 
 schema_version: 1
-generated_at: '2026-05-14'
+generated_at: '2026-05-15'
 generator: tools/rebuild_index.py
 total_laws: 15
 total_common_compendiums: 3
