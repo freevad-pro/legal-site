@@ -24,6 +24,8 @@ from app.checks import (
     evaluate,
     http_status_check,
     indexof_check,
+    latin_only_in_selectors,
+    latin_to_cyrillic_ratio,
     link_near_form_to_privacy,
     lookup_pages_by_keywords,
     text_length_threshold,
@@ -618,6 +620,10 @@ def test_registry_contains_expected_names() -> None:
         "product_card_audit",
         "notification_mechanism_audit",
         "prohibited_content_dictionary_match",
+        "cookies_pan_storage_audit",
+        "http_security_audit",
+        "parked_domain_detection",
+        "offer_acceptance_audit",
         "link_near_form_to_privacy",
         "lookup_pages_by_keywords",
         "http_status_check",
@@ -625,6 +631,8 @@ def test_registry_contains_expected_names() -> None:
         "date_in_document",
         "cookie_set_before_consent",
         "indexof_check",
+        "latin_only_in_selectors",
+        "latin_to_cyrillic_ratio",
     }
     assert expected.issubset(REGISTRY.keys())
 
@@ -993,3 +1001,114 @@ def test_text_length_threshold_decodes_cp1251_without_http_charset(
         url="https://example.test/", html=_load_fixture("site-with-policy-link.html")
     )
     assert text_length_threshold(signal, artifacts).status == "pass"
+
+
+# ----- latin_only_in_selectors ----- #
+
+
+def _latin_signal(*patterns: str) -> PageSignal:
+    return PageSignal(
+        type="catalog_titles_latin",
+        description="x",
+        html_patterns=patterns,
+        check="latin_only_in_selectors",
+    )
+
+
+def test_latin_only_in_selectors_fail_on_latin_title() -> None:
+    signal = _latin_signal("h1, .product-title")
+    artifacts = _artifacts(html="<html><body><h1>Smart TV Pro</h1></body></html>")
+    result = latin_only_in_selectors(signal, artifacts)
+    assert result.status == "fail"
+    assert "Smart TV Pro" in (result.evidence or "")
+
+
+def test_latin_only_in_selectors_pass_on_russian_title() -> None:
+    signal = _latin_signal("h1")
+    artifacts = _artifacts(html="<html><body><h1>Молоко 2,5%</h1></body></html>")
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_pass_on_mixed_title() -> None:
+    """Если в заголовке есть кириллица — товарный знак на латинице допустим."""
+    signal = _latin_signal("h1")
+    artifacts = _artifacts(html="<html><body><h1>iPhone 16 — смартфон</h1></body></html>")
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_skips_text_without_latin_letters() -> None:
+    """<h1>2024</h1> — нет латиницы, не флаг."""
+    signal = _latin_signal("h1")
+    artifacts = _artifacts(html="<html><body><h1>2024</h1></body></html>")
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_skips_empty_elements() -> None:
+    signal = _latin_signal(".product-title")
+    artifacts = _artifacts(
+        html='<html><body><div class="product-title"></div></body></html>'
+    )
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_inconclusive_without_patterns() -> None:
+    signal = PageSignal(type="x", description="x", check="latin_only_in_selectors")
+    result = latin_only_in_selectors(signal, _artifacts())
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "evidence_missing"
+
+
+# ----- latin_to_cyrillic_ratio ----- #
+
+
+def _ratio_html(text: str) -> str:
+    return f"<html><body><p>{text}</p></body></html>"
+
+
+def test_latin_to_cyrillic_ratio_pass_on_russian_text() -> None:
+    text = "Молоко свежее " * 40
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+        threshold=0.7,  # type: ignore[call-arg]
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(text)))
+    assert result.status == "pass"
+
+
+def test_latin_to_cyrillic_ratio_fail_on_english_text() -> None:
+    text = "Smart phone fresh " * 40
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+        threshold=0.7,  # type: ignore[call-arg]
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(text)))
+    assert result.status == "fail"
+    assert "ratio" in (result.explanation or "")
+
+
+def test_latin_to_cyrillic_ratio_inconclusive_on_short_text() -> None:
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html("Привет мир")))
+    assert result.status == "inconclusive"
+    assert result.inconclusive_reason == "evidence_missing"
+
+
+def test_latin_to_cyrillic_ratio_respects_custom_threshold() -> None:
+    """С threshold=0.95 текст, где латиница ~76%, должен pass-нуть."""
+    text = ("Smart phone fresh " * 30) + ("молоко " * 8)
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+        threshold=0.95,  # type: ignore[call-arg]
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(text)))
+    assert result.status == "pass"

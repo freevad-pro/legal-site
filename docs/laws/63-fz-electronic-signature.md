@@ -229,10 +229,7 @@ violations:
           check: registration_email_audit
         - type: no_https
           description: "Основной домен не редиректит HTTP на HTTPS и не отдаёт HSTS"
-          check: http_status_check
-          expected_status: 301
-          required_headers:
-            - "Strict-Transport-Security"
+          check: http_security_audit
 
     penalties:
       - subject: organization

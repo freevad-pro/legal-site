@@ -373,8 +373,7 @@ violations:
           check: trademark_similarity_check
         - type: parked_domain
           description: "Припаркованный домен / выставлен на продажу"
-          check: http_status_check
-          expected_redirect: "parking page"
+          check: parked_domain_detection
 
     penalties:
       - subject: organization

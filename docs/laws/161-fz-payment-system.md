@@ -165,7 +165,7 @@ violations:
       page_signals:
         - type: card_data_in_cookies_or_storage
           description: "Реквизиты карты сохраняются в cookies, localStorage или sessionStorage клиента"
-          check: cookie_set_before_consent
+          check: cookies_pan_storage_audit
         - type: card_number_in_url
           description: "Номер карты или CVV передаётся через GET-параметры"
           html_patterns:
@@ -318,10 +318,6 @@ violations:
             - "возврат товара"
             - "отказ от заказа"
             - "оспаривание операции"
-        - type: refund_terms_too_short
-          description: "Раздел о возврате слишком короткий или не содержит сроков и контактов"
-          check: text_length_threshold
-          min_chars: 800
         - type: refund_only_to_card
           description: "Заявлено, что возврат возможен «только тем же способом, что и оплата», но не описано как именно"
           required_keywords:
@@ -517,8 +513,7 @@ violations:
       site_signals:
         - type: no_https_redirect
           description: "Сайт не делает 301 редирект с HTTP на HTTPS"
-          check: http_status_check
-          expected_status: 301
+          check: http_security_audit
         - type: weak_tls
           description: "Сервер поддерживает TLS 1.0 / 1.1 или слабые шифры"
           check: tls_audit

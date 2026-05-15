@@ -79,7 +79,8 @@ violations:
             - 'html[lang="de"], html[lang="fr"], html[lang="zh" i]'
         - type: latin_to_cyrillic_ratio_high
           description: "Доля латиницы в видимом тексте >70% от суммы кириллицы и латиницы"
-          check: text_length_threshold
+          check: latin_to_cyrillic_ratio
+          threshold: 0.7
       site_signals:
         - type: no_russian_language_switcher
           description: "Нет переключателя на русский и нет русской версии"
@@ -122,8 +123,8 @@ violations:
           html_patterns:
             - 'h1, h2, h3, .product-title, .product-name, .category-title'
             - '.tariff, .plan, .pricing-card'
-          check: text_length_threshold
-          notes: "Заголовок без кириллицы и не из реестра товарных знаков — флаг"
+          check: latin_only_in_selectors
+          notes: "Заголовок без кириллицы и с латиницей — флаг. Сверка с реестром товарных знаков — будущая LLM-проверка (trademark_registry_check)."
       site_signals:
         - type: trademark_registry_check
           description: "Сверка фирменных наименований с реестром Роспатента"
@@ -255,11 +256,6 @@ violations:
             - "лайфхак"
             - "митап"
             - "тимбилдинг"
-      site_signals:
-        - type: anglicisms_review_against_dictionaries
-          description: "Сверка спорных слов с действующими нормативными словарями"
-          check: lookup_pages_by_keywords
-          source: "https://ruslang.ru/normativnyje_slovari"
 
     penalties:
       - subject: official

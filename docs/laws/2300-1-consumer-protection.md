@@ -257,10 +257,7 @@ violations:
             - "условия использования"
         - type: checkout_without_offer_acceptance
           description: "Форма оформления заказа не содержит подтверждения согласия с офертой"
-          check: link_near_form_to_privacy
-          keywords:
-            - "согласен с условиями"
-            - "ознакомлен с офертой"
+          check: offer_acceptance_audit
 
     penalties:
       - subject: official

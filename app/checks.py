@@ -765,6 +765,100 @@ def indexof_check(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     return CheckResult(status="pass", explanation="no directory listing exposed")
 
 
+_CYRILLIC_RE = re.compile(r"[А-Яа-яЁё]")
+_LATIN_RE = re.compile(r"[A-Za-z]")
+_LATIN_RATIO_MIN_LETTERS = 200
+
+
+def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
+    """Элементы по `html_patterns` сигнала содержат латиницу без кириллицы → fail.
+
+    Для каждого селектора собираем найденные элементы. Если хоть один содержит
+    непустой текст без кириллической буквы и с латиницей → `fail` с evidence
+    (текст элемента, обрезанный до 200 символов). Если ни один такой не найден
+    → `pass`.
+
+    Семантика: применяется к селекторам заголовков карточек товара / категорий
+    (`.product-title`, `h1.product-name`, `.category-title`, …). Помогает
+    выявлять заголовки `iPhone 16`, `Smart TV`, `Buy now` без русского описания.
+    Замена `text_length_threshold`, которая стояла на этом sub-signal'е и
+    проверяла длину политики — совершенно не тот контекст.
+    """
+
+    html_patterns = getattr(signal, "html_patterns", ()) or ()
+    if not html_patterns:
+        return CheckResult(
+            status="inconclusive",
+            explanation="no html_patterns to inspect",
+            inconclusive_reason="evidence_missing",
+        )
+
+    soup = _parse(artifacts.html)
+    for pattern in html_patterns:
+        for element in _safe_select(soup, pattern):
+            text = " ".join(element.get_text(separator=" ", strip=True).split())
+            if not text:
+                continue
+            if _CYRILLIC_RE.search(text):
+                continue
+            if not _LATIN_RE.search(text):
+                continue
+            return CheckResult(
+                status="fail",
+                evidence=_truncate(text),
+                explanation=f"selector {pattern!r} matched element without cyrillic",
+            )
+    return CheckResult(
+        status="pass",
+        explanation="every matched element contains cyrillic letters",
+    )
+
+
+def latin_to_cyrillic_ratio(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
+    """Доля латиницы в plain-text страницы > threshold → fail (default 0.7).
+
+    Считаем буквы кириллицы и латиницы в plain-text всей страницы (без `<script>`
+    / `<style>` / `<noscript>`). Если их сумма < 200 — `inconclusive`
+    (`evidence_missing`): мало текста для статистики. Иначе:
+    `ratio = latin / (latin + cyrillic)`. Если `ratio > threshold` → `fail`.
+
+    Параметр `threshold` берётся из `signal.model_extra["threshold"]`, default 0.7.
+    """
+
+    threshold_raw = (signal.model_extra or {}).get("threshold", 0.7)
+    try:
+        threshold = float(threshold_raw)
+    except (TypeError, ValueError):
+        return CheckResult(
+            status="inconclusive",
+            explanation=f"invalid threshold: {threshold_raw!r}",
+        )
+
+    soup = _parse(artifacts.html)
+    text = _plain_text(soup)
+    cyr_count = len(_CYRILLIC_RE.findall(text))
+    lat_count = len(_LATIN_RE.findall(text))
+    total = cyr_count + lat_count
+    if total < _LATIN_RATIO_MIN_LETTERS:
+        return CheckResult(
+            status="inconclusive",
+            explanation=f"too little text to assess: {total} letters",
+            inconclusive_reason="evidence_missing",
+        )
+
+    ratio = lat_count / total
+    if ratio > threshold:
+        return CheckResult(
+            status="fail",
+            evidence=f"latin/(latin+cyr) = {ratio:.2f}",
+            explanation=f"latin-cyrillic ratio {ratio:.2f} > threshold {threshold:.2f}",
+        )
+    return CheckResult(
+        status="pass",
+        explanation=f"latin-cyrillic ratio {ratio:.2f} ≤ threshold {threshold:.2f}",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Реестр
 # ---------------------------------------------------------------------------
@@ -781,6 +875,10 @@ _STUBS: tuple[str, ...] = (
     "product_card_audit",
     "notification_mechanism_audit",
     "prohibited_content_dictionary_match",
+    "cookies_pan_storage_audit",
+    "http_security_audit",
+    "parked_domain_detection",
+    "offer_acceptance_audit",
 )
 
 REGISTRY: dict[str, CheckFunction] = {
@@ -792,6 +890,8 @@ REGISTRY: dict[str, CheckFunction] = {
     "date_in_document": date_in_document,
     "cookie_set_before_consent": cookie_set_before_consent,
     "indexof_check": indexof_check,
+    "latin_only_in_selectors": latin_only_in_selectors,
+    "latin_to_cyrillic_ratio": latin_to_cyrillic_ratio,
 }
 
 
