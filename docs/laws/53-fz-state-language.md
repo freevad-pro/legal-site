@@ -168,6 +168,8 @@ violations:
             - 'button, a.btn, a.button'
             - 'input[type="submit"][value], input[type="button"][value]'
             - 'nav a, header a, .menu a, .navbar a'
+          check: latin_only_in_selectors
+          notes: "Без check: универсальный обработчик `html_patterns_only` ловит любой <button>, включая бургер-меню без текста. `latin_only_in_selectors` пропускает элементы с пустым видимым текстом, читает value/aria-label/title/placeholder и пропускает элементы с кириллицей."
 
     penalties:
       - subject: official

@@ -770,19 +770,44 @@ _LATIN_RE = re.compile(r"[A-Za-z]")
 _LATIN_RATIO_MIN_LETTERS = 200
 
 
+def _element_visible_text(element: Tag) -> str:
+    """Видимый текст элемента + `value` у `<input>` (там `get_text()` пуст).
+
+    Для `<input type="submit" value="Купить">` визуальный текст кнопки лежит
+    в атрибуте `value` — `get_text()` для `<input>` всегда возвращает пустую
+    строку. Для остальных элементов читаем только `get_text()`. Atributs
+    `aria-label` / `title` / `placeholder` намеренно не читаем: они служат
+    accessibility (screen reader, tooltip, hint), а не основной видимой
+    подписи; English-конвенция в этих атрибутах на иконках-кнопках широко
+    распространена и не образует нарушения 53-ФЗ.
+    """
+    text = " ".join(element.get_text(separator=" ", strip=True).split())
+    if text:
+        return text
+    if element.name == "input":
+        value = element.get("value")
+        if isinstance(value, str) and value.strip():
+            return " ".join(value.split())
+    return ""
+
+
 def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     """Элементы по `html_patterns` сигнала содержат латиницу без кириллицы → fail.
 
     Для каждого селектора собираем найденные элементы. Если хоть один содержит
-    непустой текст без кириллической буквы и с латиницей → `fail` с evidence
-    (текст элемента, обрезанный до 200 символов). Если ни один такой не найден
-    → `pass`.
+    непустой видимый текст без кириллической буквы и с латиницей → `fail` с
+    evidence (текст элемента, обрезанный до 200 символов). Если ни один такой не
+    найден → `pass`.
+
+    «Видимый текст» — `get_text()` или, если он пуст, первый непустой из
+    атрибутов `value` / `aria-label` / `title` / `placeholder`. Это покрывает
+    `<input type="submit" value="Купить">`, иконки-кнопки и
+    `<button aria-label="...">` без визуального текста.
 
     Семантика: применяется к селекторам заголовков карточек товара / категорий
-    (`.product-title`, `h1.product-name`, `.category-title`, …). Помогает
-    выявлять заголовки `iPhone 16`, `Smart TV`, `Buy now` без русского описания.
-    Замена `text_length_threshold`, которая стояла на этом sub-signal'е и
-    проверяла длину политики — совершенно не тот контекст.
+    (`.product-title`, `h1.product-name`, `.category-title`, …) и к кнопкам и
+    элементам навигации (53-ФЗ `button_text_latin_only`). Помогает выявлять
+    `iPhone 16`, `Smart TV`, `Buy now`, `Sign Up` без русского эквивалента.
     """
 
     html_patterns = getattr(signal, "html_patterns", ()) or ()
@@ -796,7 +821,7 @@ def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckRe
     soup = _parse(artifacts.html)
     for pattern in html_patterns:
         for element in _safe_select(soup, pattern):
-            text = " ".join(element.get_text(separator=" ", strip=True).split())
+            text = _element_visible_text(element)
             if not text:
                 continue
             if _CYRILLIC_RE.search(text):
@@ -879,6 +904,11 @@ _STUBS: tuple[str, ...] = (
     "http_security_audit",
     "parked_domain_detection",
     "offer_acceptance_audit",
+    "image_attribution_audit",
+    "text_provenance_audit",
+    "media_embed_license_audit",
+    "trademark_use_audit",
+    "font_license_audit",
 )
 
 REGISTRY: dict[str, CheckFunction] = {

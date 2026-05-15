@@ -624,6 +624,11 @@ def test_registry_contains_expected_names() -> None:
         "http_security_audit",
         "parked_domain_detection",
         "offer_acceptance_audit",
+        "image_attribution_audit",
+        "text_provenance_audit",
+        "media_embed_license_audit",
+        "trademark_use_audit",
+        "font_license_audit",
         "link_near_form_to_privacy",
         "lookup_pages_by_keywords",
         "http_status_check",
@@ -1047,6 +1052,48 @@ def test_latin_only_in_selectors_skips_empty_elements() -> None:
     signal = _latin_signal(".product-title")
     artifacts = _artifacts(
         html='<html><body><div class="product-title"></div></body></html>'
+    )
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_reads_input_value_attribute() -> None:
+    """`<input type="submit" value="...">` — текст в value, get_text пуст."""
+    signal = _latin_signal('input[type="submit"][value]')
+    artifacts = _artifacts(
+        html='<html><body><input type="submit" value="Sign Up"></body></html>'
+    )
+    result = latin_only_in_selectors(signal, artifacts)
+    assert result.status == "fail"
+    assert "Sign Up" in (result.evidence or "")
+
+
+def test_latin_only_in_selectors_input_value_with_cyrillic_passes() -> None:
+    signal = _latin_signal('input[type="submit"][value]')
+    artifacts = _artifacts(
+        html='<html><body><input type="submit" value="Купить"></body></html>'
+    )
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_ignores_aria_label_on_burger() -> None:
+    """Бургер `<button aria-label="Toggle menu">` — accessibility-атрибут.
+
+    aria-label служит screen reader'ам, English-конвенция в нём для иконок-кнопок
+    широко распространена и не образует нарушения 53-ФЗ. Чек этот атрибут не
+    читает и возвращает pass.
+    """
+    signal = _latin_signal("button")
+    artifacts = _artifacts(
+        html='<html><body><button aria-label="Toggle menu"></button></body></html>'
+    )
+    assert latin_only_in_selectors(signal, artifacts).status == "pass"
+
+
+def test_latin_only_in_selectors_skips_truly_empty_button() -> None:
+    """Бургер с вложенными декоративными span'ами — без видимого текста, pass."""
+    signal = _latin_signal("button")
+    artifacts = _artifacts(
+        html='<html><body><button><span class="line"></span></button></body></html>'
     )
     assert latin_only_in_selectors(signal, artifacts).status == "pass"
 

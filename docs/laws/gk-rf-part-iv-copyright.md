@@ -81,16 +81,12 @@ violations:
             - 'img[alt*="getty" i]'
         - type: images_without_attribution
           description: "Фотографии без указания автора и источника"
-          html_patterns:
-            - 'img[src]'
-          required_absent:
-            - 'figcaption'
-            - '[class*="credit" i]'
-            - '[class*="copyright" i]'
+          check: image_attribution_audit
+          notes: "Детерминированно `img[src]` без `figcaption` ловит ВСЕ изображения на сайте (иконки, логотипы, аватары). Реальная семантика — «изображение использовано без правомерного источника» — требует LLM-проверки атрибуции."
         - type: hotlinked_external_images
           description: "Изображения с горячими ссылками на чужие домены"
-          html_patterns:
-            - 'img[src^="https://"]'
+          check: image_attribution_audit
+          notes: "`img[src^=\"https://\"]` сматчит любое https-изображение, включая собственный CDN. Различение «свой / чужой / краденый» — LLM-уровень."
       site_signals:
         - type: reverse_image_lookup_match
           description: "Изображения находятся в открытых источниках и индексах фотобанков"
@@ -154,14 +150,8 @@ violations:
       page_signals:
         - type: text_without_source
           description: "Длинные текстовые блоки без указания первоисточника"
-          html_patterns:
-            - 'article'
-            - '[class*="post" i]'
-            - '[class*="content" i]'
-          required_absent:
-            - 'a[rel*="source" i]'
-            - 'cite'
-            - 'blockquote[cite]'
+          check: text_provenance_audit
+          notes: "`article` / `[class*=\"post\"]` / `[class*=\"content\"]` без `<cite>` срабатывает на любой статье собственного авторства. Семантика «текст скопирован откуда-то» — антиплагиат-уровень (LLM)."
       site_signals:
         - type: text_match_external
           description: "Текст совпадает с известными источниками (антиплагиат)"
@@ -219,23 +209,16 @@ violations:
       page_signals:
         - type: embedded_video_external
           description: "Встроены видео из YouTube/Vimeo/RuTube — нужна проверка прав"
-          html_patterns:
-            - 'iframe[src*="youtube.com" i]'
-            - 'iframe[src*="youtu.be" i]'
-            - 'iframe[src*="vimeo.com" i]'
-            - 'iframe[src*="rutube.ru" i]'
-            - 'iframe[src*="vk.com/video" i]'
+          check: media_embed_license_audit
+          notes: "Embed YouTube/Vimeo — штатный и легальный способ публикации; флагать всё подряд = false positive. Реальная проверка — настройки канала-источника (allow embed) и наличие лицензии у владельца ролика. LLM-уровень."
         - type: background_audio
           description: "Автозапуск аудио или встроенный плеер"
-          html_patterns:
-            - 'audio[src]'
-            - 'audio[autoplay]'
-            - 'video[autoplay]'
+          check: media_embed_license_audit
+          notes: "Самохост аудио / autoplay сам по себе не нарушение — нужно знать, есть ли у владельца лицензия на трек."
         - type: hosted_video_files
           description: "Сайт хостит видеофайлы напрямую"
-          html_patterns:
-            - 'video source[src*=".mp4" i]'
-            - 'video[src*=".mp4" i]'
+          check: media_embed_license_audit
+          notes: "Самохост .mp4 ≠ пиратство. Может быть собственный продакшн."
       site_signals:
         - type: no_music_license_disclosure
           description: "Нет упоминания лицензий на медиа"
@@ -288,21 +271,16 @@ violations:
       page_signals:
         - type: trademark_in_meta
           description: "В meta-тегах используются чужие бренды"
-          html_patterns:
-            - 'meta[name="keywords"]'
-            - 'meta[name="description"]'
-            - 'title'
+          check: trademark_use_audit
+          notes: "Селекторы `meta[name=\"keywords\"]`, `meta[name=\"description\"]`, `title` срабатывают на любом сайте. Различить «использовал свой бренд» / «упомянул чужой» / «нарушил ТЗ» детерминированно нельзя — нужны реестр Роспатента и LLM-семантика."
         - type: brand_in_product_name
           description: "В названиях товаров — бренды без признаков дилерства"
-          html_patterns:
-            - '[itemprop="name"]'
-            - '[class*="product-title" i]'
-            - 'h1'
+          check: trademark_use_audit
+          notes: "`h1` / `[itemprop=\"name\"]` / `[class*=\"product-title\"]` есть у всех. Сверка с реестром ТЗ — LLM/registry-уровень."
         - type: brand_logo_used
           description: "Используются логотипы чужих брендов"
-          html_patterns:
-            - 'img[alt*="logo" i]'
-            - 'img[src*="logo" i]'
+          check: trademark_use_audit
+          notes: "`img[alt*=\"logo\"]` ловит и логотип самого сайта. Различение свой/чужой — LLM-уровень."
       site_signals:
         - type: rospatent_registry_check
           description: "Проверка регистрации бренда в Роспатенте"
@@ -507,9 +485,8 @@ violations:
       page_signals:
         - type: commercial_fonts_no_license
           description: "Коммерческие шрифты без признаков лицензии"
-          html_patterns:
-            - 'link[href*="fonts" i]'
-            - 'style:-soup-contains("@font-face")'
+          check: font_license_audit
+          notes: "`link[href*=\"fonts\"]` ловит легальные Google Fonts / Yandex Fonts / Bunny Fonts (которые recommendation сам предлагает использовать). Различение «открытая лицензия / коммерческая без лицензии» требует знания имени шрифта и его правового статуса — LLM-уровень."
         - type: nulled_plugin_signatures
           description: "Следы взломанных тем/плагинов"
           check: nulled_signatures_scan

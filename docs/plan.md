@@ -331,13 +331,15 @@
 
 **Замечание после демо (2026-05-15):** ручной прогон выявил карточку «Названия товаров на иностранном без перевода» (53-ФЗ) с evidence `account.habr.com/info/confidential/?hl=ru_RU` и текстом «failed to fetch policy». Причина — sub-signal `catalog_titles_latin` в YAML 53-ФЗ был привязан к чеку `text_length_threshold`, который проверяет длину страницы политики, а не латиницу. Проведена ревизия всех `check:`-привязок в корпусе, найдено 9 mismatch'ей (включая `card_data_in_cookies_or_storage` через `cookie_set_before_consent`, `no_https_redirect` через `http_status_check`, `parked_domain` через `http_status_check` и др.). Внесены правки: 2 sub-signal'а переведены на новые детерминированные функции `latin_only_in_selectors` и `latin_to_cyrillic_ratio`, 5 — на честные заглушки (`cookies_pan_storage_audit`, `http_security_audit`, `parked_domain_detection`, `offer_acceptance_audit`), 2 — удалены целиком (`anglicisms_review_against_dictionaries`, `refund_terms_too_short`). См. раздел «История изменений» в ADR-0003.
 
+**Дополнение (2026-05-15, дочистка):** при повторном прогоне всплыло, что (а) sub-signal `button_text_latin_only` в 53-ФЗ работает через универсальный `_check_html_patterns_only` («нашли button → fail»), из-за чего бургер-кнопки без текста и иконки-ссылки давали ложноположительный fail; (б) violation `gk-iv-pirated-software-fonts` (high) ловил Google Fonts через `link[href*="fonts" i]`, противореча собственному recommendation; (в) аналогичные гиперширокие селекторы — во всём `gk-rf-part-iv-copyright.md`. Закрыто двумя движениями: `button_text_latin_only` привязан к свежесозданному `latin_only_in_selectors` (пропускает пустые элементы и элементы с кириллицей); ревизия `gk-rf-part-iv` свела 10 sub-signal'ов из 5 violations к 5 честным заглушкам (`image_attribution_audit`, `text_provenance_audit`, `media_embed_license_audit`, `trademark_use_audit`, `font_license_audit`). LLM в итерации 7 реализует каждую как семантическую check-функцию.
+
 **Открытое:** на старте этапа 6 миграции корпуса решаются open questions 1–6 из tasklist'а (граница тегов `ad_content`/`ugc`/`has_signing`, подход к «текстовому триггер+эскейп» в 38-ФЗ, тонкая настройка детектора `_detect_has_signing`).
 
 **Известные ограничения, остающиеся после итерации (закрываются только LLM в итерации 7):**
 
 - На медиа-сайтах со статьями про регулируемые товары (БАД, VPN, кредиты) тег `ad_content` активируется → `prohibited_keywords` может дать false positive «статья ≠ реклама».
 - Аналогичная проблема для контентных запретов 436-ФЗ (`'ЛГБТ'`, `'наркотик'`, `'способы суицида'` в новостной статье — не пропаганда).
-- Гиперширокие селекторы в `gk-rf-part-iv-copyright.md` (`img[src^="https://"]`, `title`, `link[href*="fonts"]`) — отдельный класс проблем, точечная ревизия отложена.
+- Семантические проверки авторского права (атрибуция изображений, плагиат текстов, лицензии медиа, использование ТЗ в meta/h1/логотипах, легальность шрифтов) сведены к 5 stub-семантикам — реализация в итерации 7.
 
 ---
 
