@@ -473,14 +473,67 @@ def _not_implemented(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
 # ---------------------------------------------------------------------------
 
 _PD_FIELD_SELECTORS: tuple[str, ...] = (
+    # type-based — самые надёжные
     'input[type="email"]',
     'input[type="tel"]',
+    # name-based (case-insensitive substring)
     'input[name*="email" i]',
     'input[name*="phone" i]',
     'input[name*="tel" i]',
     'input[name*="name" i]',
     'input[name*="fio" i]',
     'textarea[name*="message" i]',
+    # placeholder-based — для SPA с placeholder-only полями (RU + EN)
+    'input[placeholder*="имя" i]',
+    'input[placeholder*="фио" i]',
+    'input[placeholder*="@" i]',
+    'input[placeholder*="email" i]',
+    'input[placeholder*="e-mail" i]',
+    'input[placeholder*="почта" i]',
+    'input[placeholder*="телефон" i]',
+    'input[placeholder*="phone" i]',
+    'input[placeholder*="мобиль" i]',
+    'textarea[placeholder*="сообщ" i]',
+    # aria-label based
+    'input[aria-label*="имя" i]',
+    'input[aria-label*="фио" i]',
+    'input[aria-label*="email" i]',
+    'input[aria-label*="почта" i]',
+    'input[aria-label*="телефон" i]',
+    'input[aria-label*="phone" i]',
+)
+
+# Поисковые/фильтровые инпуты не образуют сбор ПДн — исключаем.
+_SEARCH_INPUT_SELECTORS: tuple[str, ...] = (
+    'input[type="search"]',
+    'input[name="q"]',
+    'input[name="query"]',
+    'input[name*="search" i]',
+    'input[role="searchbox"]',
+    'input[placeholder*="поиск" i]',
+    'input[placeholder*="search" i]',
+    'input[aria-label*="поиск" i]',
+    'input[aria-label*="search" i]',
+)
+
+# Кнопка-сабмит рядом с PD-инпутом = «это форма», а не одинокий виджет.
+_SUBMIT_BUTTON_SELECTORS: tuple[str, ...] = (
+    'button[type="submit"]',
+    'input[type="submit"]',
+)
+
+_SUBMIT_BUTTON_TEXT_KEYWORDS: tuple[str, ...] = (
+    "отправить",
+    "submit",
+    "подписаться",
+    "subscribe",
+    "записаться",
+    "регистр",
+    "оставить заявку",
+    "заказать",
+    "оформить",
+    "продолжить",
+    "далее",
 )
 
 _PRIVACY_LINK_KEYWORDS: tuple[str, ...] = (
@@ -495,23 +548,105 @@ _PRIVACY_LINK_KEYWORDS: tuple[str, ...] = (
 )
 
 
+def _contains_submit_button(container: Tag) -> bool:
+    """В контейнере есть `<button type=submit>` / `<input type=submit>` или
+    обычный `<button>` с текстом «Отправить»/«Submit»/«Подписаться» и т. п."""
+
+    for selector in _SUBMIT_BUTTON_SELECTORS:
+        if _safe_select(container, selector):
+            return True
+    for btn in _safe_select(container, "button"):
+        text = btn.get_text(separator=" ", strip=True).lower()
+        if any(kw in text for kw in _SUBMIT_BUTTON_TEXT_KEYWORDS):
+            return True
+    return False
+
+
+def _find_form_container(inp: Tag) -> Tag | None:
+    """Найти «форму» вокруг PD-инпута: ближайший `<form>`-предок или ближайший
+    ancestor, содержащий сабмит-кнопку. Возвращает None для одиноких инпутов
+    без сабмит-кнопки рядом (вероятно, не форма сбора ПДн)."""
+
+    form_ancestor = inp.find_parent("form")
+    if isinstance(form_ancestor, Tag):
+        return form_ancestor
+    node = inp.parent
+    while isinstance(node, Tag):
+        if _contains_submit_button(node):
+            return node
+        node = node.parent
+    return None
+
+
+def _find_pd_form_containers(soup: BeautifulSoup) -> list[Tag]:
+    """PD-формы на странице: `<form>` с PD-инпутами либо div-кластеры
+    «PD-инпут + сабмит-кнопка в общем предке». Поисковые/фильтровые инпуты
+    исключаются."""
+
+    search_input_ids: set[int] = set()
+    for selector in _SEARCH_INPUT_SELECTORS:
+        for el in _safe_select(soup, selector):
+            search_input_ids.add(id(el))
+
+    pd_inputs: list[Tag] = []
+    seen_inputs: set[int] = set()
+    for selector in _PD_FIELD_SELECTORS:
+        for el in _safe_select(soup, selector):
+            if id(el) in seen_inputs or id(el) in search_input_ids:
+                continue
+            seen_inputs.add(id(el))
+            pd_inputs.append(el)
+
+    containers: list[Tag] = []
+    seen_containers: set[int] = set()
+    for inp in pd_inputs:
+        container = _find_form_container(inp)
+        if container is None:
+            continue
+        if id(container) in seen_containers:
+            continue
+        seen_containers.add(id(container))
+        containers.append(container)
+
+    return containers
+
+
 def _is_pd_form(form: Tag) -> bool:
+    """Совместимость со старым API: `<form>` с PD-инпутами (без сабмит-эвристики).
+    Используется ТОЛЬКО для обратной совместимости тестов; новая логика —
+    `_find_pd_form_containers`."""
     return any(_safe_select(form, sel) for sel in _PD_FIELD_SELECTORS)
 
 
 def link_near_form_to_privacy(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     """Возле PD-форм должна быть ссылка на политику/текст согласия.
 
-    Алгоритм: ищем все `<form>`, отфильтровываем PD-формы (с email/tel/name/...).
-    Для каждой PD-формы — ищем `<a>` внутри `<form>` или в её родителе с глубиной
-    ≤ 2 по ключевым словам в тексте/href. Хоть одна форма без такой ссылки → fail.
+    Алгоритм:
+    1. Находим PD-инпуты по селекторам `_PD_FIELD_SELECTORS` (type/name/
+       placeholder/aria-label, RU + EN). Поисковые/фильтровые инпуты
+       исключаются (`_SEARCH_INPUT_SELECTORS`).
+    2. Для каждого PD-инпута ищем «форму»: ближайший `<form>`-предок или
+       ближайший предок, содержащий сабмит-кнопку. Это покрывает SPA-формы,
+       которые рендерятся без `<form>`-тега.
+    3. Для каждой такой формы — ищем `<a>` внутри неё или в родителях с
+       глубиной ≤ 2 по ключевым словам в тексте/href. Хоть одна форма без
+       такой ссылки → fail.
     """
 
     soup = _parse(artifacts.html)
-    forms = [f for f in soup.find_all("form") if isinstance(f, Tag) and _is_pd_form(f)]
+    forms = _find_pd_form_containers(soup)
     if not forms:
+        # Ни одного PD-инпута с сабмит-кнопкой рядом — вероятно, на странице
+        # действительно нет формы сбора ПДн (или она настолько нестандартная,
+        # что эвристика её не видит — placeholder без ключевых слов, рендеринг
+        # после клика и т. п.).
         return CheckResult(
-            status="inconclusive", explanation="на странице не найдены формы сбора ПДн"
+            status="inconclusive",
+            explanation=(
+                "не удалось автоматически обнаружить форму сбора ПДн "
+                "для проверки (нужна ручная проверка)"
+            ),
+            inconclusive_reason="evidence_missing",
         )
 
     extra_keywords = tuple((signal.model_extra or {}).get("keywords", ()))

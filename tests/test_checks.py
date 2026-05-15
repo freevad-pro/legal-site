@@ -817,6 +817,81 @@ def test_link_near_form_to_privacy_inconclusive_if_no_pd_form() -> None:
     assert link_near_form_to_privacy(signal, _artifacts(html=html)).status == "inconclusive"
 
 
+def test_link_near_form_to_privacy_detects_spa_form_without_form_tag() -> None:
+    """SPA-форма без `<form>`: div с PD-инпутом и кнопкой «Отправить» считается формой."""
+    html = """
+    <html><body>
+      <main>
+        <div class="contact-form">
+          <input placeholder="Имя">
+          <input placeholder="you@example.ru">
+          <button>Отправить</button>
+        </div>
+      </main>
+      <footer>© 2026</footer>
+    </body></html>
+    """
+    signal = SiteSignal(type="x", description="x", check="link_near_form_to_privacy")
+    # Форма найдена, политики поблизости нет → fail (не inconclusive).
+    assert link_near_form_to_privacy(signal, _artifacts(html=html)).status == "fail"
+
+
+def test_link_near_form_to_privacy_spa_form_with_privacy_link_passes() -> None:
+    html = """
+    <html><body>
+      <main>
+        <div class="contact-form">
+          <input placeholder="Имя">
+          <input placeholder="you@example.ru">
+          <button>Отправить</button>
+          <a href="/privacy">Политика конфиденциальности</a>
+        </div>
+      </main>
+    </body></html>
+    """
+    signal = SiteSignal(type="x", description="x", check="link_near_form_to_privacy")
+    assert link_near_form_to_privacy(signal, _artifacts(html=html)).status == "pass"
+
+
+def test_link_near_form_to_privacy_ignores_search_box() -> None:
+    """`<input type="search">` или placeholder «Поиск» — не форма сбора ПДн."""
+    html = """
+    <html><body>
+      <input type="search" placeholder="Поиск по сайту">
+      <input name="q" placeholder="Search...">
+      <button>Найти</button>
+    </body></html>
+    """
+    signal = SiteSignal(type="x", description="x", check="link_near_form_to_privacy")
+    assert link_near_form_to_privacy(signal, _artifacts(html=html)).status == "inconclusive"
+
+
+def test_link_near_form_to_privacy_lonely_input_without_submit_is_ignored() -> None:
+    """PD-инпут без сабмит-кнопки в DOM (одиночный виджет) — не форма."""
+    html = """
+    <html><body>
+      <input placeholder="Имя для приветствия">
+      <p>Какой-то текст</p>
+    </body></html>
+    """
+    signal = SiteSignal(type="x", description="x", check="link_near_form_to_privacy")
+    assert link_near_form_to_privacy(signal, _artifacts(html=html)).status == "inconclusive"
+
+
+def test_link_near_form_to_privacy_recognizes_email_by_at_in_placeholder() -> None:
+    """placeholder с «@» (типичный email-плейсхолдер) — PD-поле."""
+    html = """
+    <html><body>
+      <div>
+        <input placeholder="user@example.com">
+        <button type="submit">Подписаться</button>
+      </div>
+    </body></html>
+    """
+    signal = SiteSignal(type="x", description="x", check="link_near_form_to_privacy")
+    assert link_near_form_to_privacy(signal, _artifacts(html=html)).status == "fail"
+
+
 # ----- lookup_pages_by_keywords ----- #
 
 
