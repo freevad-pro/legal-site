@@ -980,6 +980,7 @@ _STUBS: tuple[str, ...] = (
     "media_embed_license_audit",
     "trademark_use_audit",
     "font_license_audit",
+    "font_size_audit",
 )
 
 REGISTRY: dict[str, CheckFunction] = {

@@ -674,6 +674,7 @@ def test_registry_contains_expected_names() -> None:
         "media_embed_license_audit",
         "trademark_use_audit",
         "font_license_audit",
+        "font_size_audit",
         "link_near_form_to_privacy",
         "lookup_pages_by_keywords",
         "http_status_check",

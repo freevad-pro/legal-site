@@ -296,11 +296,12 @@ violations:
       page_signals:
         - type: font_size_ratio_violation
           description: "Парный иностранный текст имеет больший font-size, чем русский"
-          html_patterns:
-            - '[lang="en"], [lang^="en-" i]'
-            - '.hero h1, .hero .title'
-          check: text_length_threshold
-          notes: "Сравнение computed font-size парных RU/EN элементов"
+          check: font_size_audit
+          notes: |
+            Требует computed font-size парных RU/EN элементов (через Playwright
+            getComputedStyle или CSSOM). Сырой HTML недостаточно — font-size
+            обычно задаётся каскадом классов и media queries. Семантическая
+            проверка, до реализации возвращает скрытый inconclusive.
 
     penalties:
       - subject: official
