@@ -1143,6 +1143,51 @@ def test_latin_only_in_selectors_skips_truly_empty_button() -> None:
     assert latin_only_in_selectors(signal, artifacts).status == "pass"
 
 
+def test_latin_only_in_selectors_ignores_cookie_consent_dialog() -> None:
+    """Кнопки внутри `[role="dialog"]` (TCF / CMP) не должны срабатывать.
+
+    На habr.com Google Funding Choices рендерит
+    `<button class="fc-button fc-cta-consent">Consent</button>` внутри
+    `.fc-dialog[role="dialog"]`. Класс содержит `cta-consent`, и без стрипа
+    `[class*="cta" i]` сваливался в fail. Кнопки CMP-баннеров не являются
+    UI-элементами сайта и должны игнорироваться.
+    """
+    html = (
+        '<html><body>'
+        '<button class="cta">Купить</button>'
+        '<div class="fc-dialog" role="dialog">'
+        '  <button class="fc-button fc-cta-consent">Consent</button>'
+        '</div>'
+        '</body></html>'
+    )
+    signal = PageSignal(
+        type="x",
+        description="x",
+        check="latin_only_in_selectors",
+        html_patterns=['[class*="cta" i]'],
+    )
+    result = latin_only_in_selectors(signal, _artifacts(html=html))
+    assert result.status == "pass", result.evidence
+
+
+def test_latin_only_in_selectors_ignores_aria_hidden_elements() -> None:
+    """Латинский текст в `[aria-hidden="true"]` не должен срабатывать."""
+    html = (
+        '<html><body>'
+        '<h1 class="product-title">Смартфон iPhone 16</h1>'
+        '<h2 class="product-title" aria-hidden="true">Smart Phone Hidden</h2>'
+        '</body></html>'
+    )
+    signal = PageSignal(
+        type="x",
+        description="x",
+        check="latin_only_in_selectors",
+        html_patterns=[".product-title"],
+    )
+    result = latin_only_in_selectors(signal, _artifacts(html=html))
+    assert result.status == "pass", result.evidence
+
+
 def test_latin_only_in_selectors_inconclusive_without_patterns() -> None:
     signal = PageSignal(type="x", description="x", check="latin_only_in_selectors")
     result = latin_only_in_selectors(signal, _artifacts())

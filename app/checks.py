@@ -157,14 +157,14 @@ _VISIBLE_TEXT_DROP_SELECTORS: tuple[str, ...] = (
 )
 
 
-def _visible_plain_text(soup: BeautifulSoup) -> str:
-    """`_plain_text` + удаление кода, скрытых элементов и cookie-consent блоков.
+def _strip_invisible(soup: BeautifulSoup) -> None:
+    """Удалить из soup невидимое/CMP/код-блоки. Мутирует soup на месте.
 
-    Используется в проверках, которые анализируют «язык сайта»: TCF/GDPR-баннеры
-    (IAB Europe) на любом российском сайте могут добавлять десятки тысяч
-    английских символов и ложно валить `latin_to_cyrillic_ratio`. Аналогично
-    `<code>/<pre>` блоки на tech-сайтах — это не контент на иностранном языке,
-    а исходники.
+    TCF/GDPR-баннеры (IAB Europe) на любом российском сайте могут добавлять
+    десятки тысяч английских символов и ложно срабатывать в любых проверках,
+    которые анализируют DOM по селекторам (например, `latin_only_in_selectors`
+    цепляет кнопку «Consent» внутри `[class*="cta"]`). Аналогично `<code>` и
+    `[aria-hidden="true"]` не отражают видимый текст сайта.
     """
 
     for tag in soup(["script", "style", "noscript"]):
@@ -172,6 +172,12 @@ def _visible_plain_text(soup: BeautifulSoup) -> str:
     for selector in _VISIBLE_TEXT_DROP_SELECTORS:
         for tag in _safe_select(soup, selector):
             tag.decompose()
+
+
+def _visible_plain_text(soup: BeautifulSoup) -> str:
+    """`_plain_text` со стрипом невидимого. Используется в `latin_to_cyrillic_ratio`."""
+
+    _strip_invisible(soup)
     return " ".join(soup.get_text(separator=" ", strip=True).split())
 
 
@@ -852,15 +858,20 @@ def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckRe
     evidence (текст элемента, обрезанный до 200 символов). Если ни один такой не
     найден → `pass`.
 
-    «Видимый текст» — `get_text()` или, если он пуст, первый непустой из
-    атрибутов `value` / `aria-label` / `title` / `placeholder`. Это покрывает
-    `<input type="submit" value="Купить">`, иконки-кнопки и
-    `<button aria-label="...">` без визуального текста.
+    «Видимый текст» — `get_text()` или, если он пуст, `value` у `<input>`
+    (см. `_element_visible_text`). `aria-label` / `title` / `placeholder`
+    намеренно не читаем: они служат accessibility, а не визуальной подписью,
+    и English-конвенция в этих атрибутах на иконках-кнопках не образует
+    нарушения 53-ФЗ.
 
     Семантика: применяется к селекторам заголовков карточек товара / категорий
     (`.product-title`, `h1.product-name`, `.category-title`, …) и к кнопкам и
     элементам навигации (53-ФЗ `button_text_latin_only`). Помогает выявлять
     `iPhone 16`, `Smart TV`, `Buy now`, `Sign Up` без русского эквивалента.
+
+    Перед сканированием соустройство очищается от cookie-consent / TCF /
+    `<dialog>` / `[aria-hidden]` / `<code>` — иначе селекторы цепляют кнопки
+    CMP-баннеров (`fc-cta-consent` от Google Funding Choices, OneTrust и т. п.).
     """
 
     html_patterns = getattr(signal, "html_patterns", ()) or ()
@@ -872,6 +883,7 @@ def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckRe
         )
 
     soup = _parse(artifacts.html)
+    _strip_invisible(soup)
     for pattern in html_patterns:
         for element in _safe_select(soup, pattern):
             text = _element_visible_text(element)
