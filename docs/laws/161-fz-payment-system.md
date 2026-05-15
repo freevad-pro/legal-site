@@ -379,9 +379,9 @@ violations:
         - type: personal_card_number_published
           description: "На сайте указан номер карты для перевода без реквизитов юрлица/ИП"
           html_patterns:
-            - 'p:contains("номер карты")'
-            - 'p:contains("4276")'
-            - 'p:contains("5469")'
+            - 'p:-soup-contains("номер карты")'
+            - 'p:-soup-contains("4276")'
+            - 'p:-soup-contains("5469")'
         - type: sbp_p2p_only
           description: "Указан только номер телефона для перевода по СБП без C2B QR"
           required_absent:
@@ -452,8 +452,8 @@ violations:
             - 'img[alt*="СБП" i]'
             - 'img[alt*="SBP" i]'
             - 'img[src*="sbp" i]'
-            - 'button:contains("СБП")'
-            - 'button:contains("Оплатить по QR")'
+            - 'button:-soup-contains("СБП")'
+            - 'button:-soup-contains("Оплатить по QR")'
       site_signals:
         - type: no_sbp_in_payment_methods
           description: "В разделе «Способы оплаты» не упомянута СБП"

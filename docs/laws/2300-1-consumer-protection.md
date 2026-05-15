@@ -182,7 +182,7 @@ violations:
         - type: price_in_foreign_currency_only
           description: "Цена указана только в иностранной валюте без рублёвого эквивалента"
           html_patterns:
-            - '[class*="price" i]:not(:contains("руб"))'
+            - '[class*="price" i]:not(:-soup-contains("руб"))'
 
     penalties:
       - subject: official
@@ -397,10 +397,10 @@ violations:
         - type: english_only_navigation
           description: "Основное навигационное меню только на английском без русского дубликата"
           html_patterns:
-            - 'nav a:contains("Home")'
-            - 'nav a:contains("Shop")'
-            - 'nav a:contains("About")'
-            - 'nav a:contains("Contact")'
+            - 'nav a:-soup-contains("Home")'
+            - 'nav a:-soup-contains("Shop")'
+            - 'nav a:-soup-contains("About")'
+            - 'nav a:-soup-contains("Contact")'
         - type: english_only_categories
           description: "Названия категорий товаров — только латиницей"
           check: text_language_detection

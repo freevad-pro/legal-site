@@ -75,8 +75,8 @@ violations:
           html_patterns:
             - 'footer'
           required_absent:
-            - 'footer:contains("ОГРН")'
-            - 'footer:contains("ИНН")'
+            - 'footer:-soup-contains("ОГРН")'
+            - 'footer:-soup-contains("ИНН")'
         - type: no_contact_email_or_phone
           description: "На странице нет ни email, ни телефона продавца"
           required_absent:
@@ -293,8 +293,8 @@ violations:
             - '[class*="card" i]'
           required_absent:
             - '[class*="price" i]'
-            - 'span:contains("₽")'
-            - 'span:contains("руб")'
+            - 'span:-soup-contains("₽")'
+            - 'span:-soup-contains("руб")'
         - type: product_card_without_manufacturer
           description: "В карточке товара нет производителя/страны происхождения"
           required_keywords:
@@ -486,8 +486,8 @@ violations:
         - type: buy_button_without_offer_link
           description: "Рядом с кнопкой оформления заказа нет ссылки на оферту/правила"
           html_patterns:
-            - 'button:contains("Купить")'
-            - 'button:contains("Оформить")'
+            - 'button:-soup-contains("Купить")'
+            - 'button:-soup-contains("Оформить")'
             - 'input[type="submit"][value*="Купить" i]'
           required_absent:
             - 'a[href*="oferta" i]'

@@ -464,9 +464,9 @@ violations:
           html_patterns:
             - 'footer'
           required_absent:
-            - 'footer:contains("©")'
-            - 'footer:contains("Copyright")'
-            - 'footer:contains("Все права защищены")'
+            - 'footer:-soup-contains("©")'
+            - 'footer:-soup-contains("Copyright")'
+            - 'footer:-soup-contains("Все права защищены")'
       site_signals:
         - type: no_terms_of_use
           description: "Нет пользовательского соглашения"
@@ -510,7 +510,7 @@ violations:
           description: "Коммерческие шрифты без признаков лицензии"
           html_patterns:
             - 'link[href*="fonts" i]'
-            - 'style:contains("@font-face")'
+            - 'style:-soup-contains("@font-face")'
         - type: nulled_plugin_signatures
           description: "Следы взломанных тем/плагинов"
           check: nulled_signatures_scan
