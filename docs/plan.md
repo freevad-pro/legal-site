@@ -73,6 +73,7 @@
 | 5а | Auth refactor: форма входа и разделение free/LLM | API на cookie-сессиях; `POST /scans` принимает `with_llm`, без сессии для `with_llm=true` — 401 | ✅ Done | [iteration-05a-auth-refactor.md](tasks/iteration-05a-auth-refactor.md) |
 | 6 | Frontend MVP | Полный пользовательский сценарий через UI работает локально | ✅ Done | [iteration-06-frontend.md](tasks/iteration-06-frontend.md) |
 | 6б | Контекстный гейтинг и инверсная логика детекции | Убрать ложные срабатывания через `applicability`-теги, поле `prohibited_keywords` и фильтрацию заглушек в отчёте | ✅ Done | [iteration-06b-detection-fixes.md](tasks/iteration-06b-detection-fixes.md) |
+| 6в | Многостраничный обход сайта | Scanner обходит ключевые внутренние страницы (контакты, политика, обратная связь, регистрация), engine агрегирует findings со всех страниц; Finding содержит `page_url` | 📋 Planned | [iteration-06c-multipage-scan.md](tasks/iteration-06c-multipage-scan.md) |
 | 7 | Гибридное LLM-покрытие | Покрытие нарушений ~90–95% за счёт семантических check-функций | 📋 Planned | [iteration-07-llm.md](tasks/iteration-07-llm.md) |
 | 8 | Production-деплой на Beget VPS | Приложение поднято на VPS под HTTPS | 📋 Planned | [iteration-08-deploy.md](tasks/iteration-08-deploy.md) |
 
@@ -342,6 +343,41 @@
 - На медиа-сайтах со статьями про регулируемые товары (БАД, VPN, кредиты) тег `ad_content` активируется → `prohibited_keywords` может дать false positive «статья ≠ реклама».
 - Аналогичная проблема для контентных запретов 436-ФЗ (`'ЛГБТ'`, `'наркотик'`, `'способы суицида'` в новостной статье — не пропаганда).
 - Семантические проверки авторского права (атрибуция изображений, плагиат текстов, лицензии медиа, использование ТЗ в meta/h1/логотипах, легальность шрифтов) сведены к 5 stub-семантикам — реализация в итерации 7.
+
+---
+
+### Итерация 6в: Многостраничный обход сайта при сканировании
+
+**Цель:** scanner перестаёт ограничиваться одной страницей — обходит ключевые внутренние (контакты, политика, обратная связь, регистрация, корзина, о компании), и engine агрегирует findings по всему набору страниц. Каждый Finding получает поле `page_url` — на какой странице найдено.
+
+**Стартовый контекст:** [docs/tasks/iteration-06c-multipage-scan.md](tasks/iteration-06c-multipage-scan.md) — детальный план с решениями Р1–Р5; [app/scanner.py](../app/scanner.py), [app/engine.py](../app/engine.py).
+
+**Корневая причина:** при ручном прогоне по habr.com выяснилось, что детектор PD-форм даёт inconclusive (форма не найдена на главной), хотя форма с правильным чекбоксом согласия живёт на `/ru/feedback/`. Аналогично 149-ФЗ «нет сведений о владельце» — данные оператора на `company.habr.com/ru/#contact`, не на главной. Текущая архитектура сканирует только URL, который дали в input'е, и не обходит внутренние страницы — большинство проверок получают неполное покрытие. Старый костыль `_find_policy_url` + httpx-fetch для политики ПДн уже подгружает одну дополнительную страницу мимо общего scanner-механизма, что подтверждает: нужен честный multi-page обход вместо разрозненных хаков.
+
+**Критерии завершения (DoD):**
+
+- Введён `ScanArtifacts(main: PageArtifacts, pages: tuple[PageArtifacts, ...], cookies, network_log)`. Cookies и network_log — на уровне ScanArtifacts (общие для сессии), не per-page.
+- `app/scanner.py` отдаёт `ScanArtifacts` с `main` + 0-10 дополнительных страниц, обнаруженных эвристикой по ссылкам с главной.
+- Новый модуль `app/discover.py` с функцией `discover_pages(main) -> list[str]`: ищет ссылки по ключевым словам в тексте/href (`контакт`, `политика`, `обратная связь`, `регистрация`, `корзина`, `о компании` + EN-аналоги), фильтр same-origin, лимит 10. Юнит-тесты ≥ 6 кейсов в `tests/test_discover.py`.
+- `app/engine.py` оценивает page-сигналы на всех страницах (`scan.main + scan.pages`); site-wide сигналы (`cookie_set_before_consent`, `indexof_check`, TLS-проверки) — только на `scan.main`. Список site-wide checks вынесен в константу `_SITE_WIDE_CHECKS`.
+- `Finding` содержит поле `page_url: str | None` — URL страницы, на которой получен best result (или None для site-wide).
+- Унифицирован policy-fetch: `text_length_threshold`, `date_in_document`, `http_status_check` читают политику из `scan.pages`, а не дёргают httpx напрямую. Если страница политики не загружена скан-обходом — inconclusive `evidence_missing`.
+- `frontend/src/lib/types.ts` и UI-карточка показывают «Найдено на странице: <url>».
+- Прогон по `https://habr.com/ru/`: 152-fz no-consent на `/ru/feedback/` даёт корректный pass (форма с правильным чекбоксом); 149-fz no-owner-info обрабатывает контактную страницу корректно (с учётом same-origin-фильтра по хосту).
+- Юнит-тесты: `tests/test_engine_multipage.py` (per-page агрегация, site-wide vs page-wide), `tests/test_discover.py` (выбор страниц по эвристике), все существующие тесты остаются зелёными.
+- Новый ADR-0004 `docs/adr/0004-multipage-scanning.md` (решения Р1-Р5).
+
+**Связь с tasklist:** [tasks/iteration-06c-multipage-scan.md](tasks/iteration-06c-multipage-scan.md)
+
+**Полезный результат:** карточки нарушений перестают быть кривыми из-за того, что мы видим только главную. Реальные нарушения локализованы по конкретным страницам (полезно для пользователя — он понимает, где править). Костыль с httpx-fetch'ем политики ушёл — архитектура честная.
+
+**Артефакты:** новый `app/discover.py`; правки `app/scanner.py` (ScanArtifacts), `app/engine.py` (per-page + page_url в Finding), `app/checks.py` (унификация policy-fetch); правки `frontend/src/lib/types.ts` и карточек findings; `docs/adr/0004-multipage-scanning.md`; новые тесты `tests/test_discover.py`, `tests/test_engine_multipage.py`.
+
+**Открытое (закрывается на старте этапа 1):**
+
+1. Поддомены (`company.habr.com` для `habr.com`) — на старте same-origin (только основной хост); поддомены через флаг в будущих итерациях.
+2. Размер выборки — лимит 10 страниц, перформанс ≈ 30s при ~3s на страницу через Playwright.
+3. SPA с lazy-load — `wait_until="load"` + short `networkidle` (как сейчас в `collect`); тяжёлые SPA — известное ограничение.
 
 ---
 
