@@ -130,6 +130,51 @@ def _plain_text(soup: BeautifulSoup) -> str:
     return " ".join(soup.get_text(separator=" ", strip=True).split())
 
 
+_VISIBLE_TEXT_DROP_SELECTORS: tuple[str, ...] = (
+    # Код, фрагменты идентификаторов и shell-команды — не «язык сайта».
+    "code",
+    "pre",
+    "kbd",
+    "samp",
+    "tt",
+    # Модалки и скрытое от пользователя содержимое.
+    "dialog",
+    '[role="dialog"]',
+    '[role="alertdialog"]',
+    '[aria-hidden="true"]',
+    # Cookie / IAB TCF / GDPR консент-баннеры: их текст пишет IAB Europe
+    # по-английски и не отражает язык контента сайта.
+    '[id*="cmp" i]',
+    '[class*="cmp" i]',
+    '[id*="consent" i]',
+    '[class*="consent" i]',
+    '[id*="cookie-banner" i]',
+    '[class*="cookie-banner" i]',
+    '[id*="cookiebanner" i]',
+    '[class*="cookiebanner" i]',
+    '[id*="gdpr" i]',
+    '[class*="gdpr" i]',
+)
+
+
+def _visible_plain_text(soup: BeautifulSoup) -> str:
+    """`_plain_text` + удаление кода, скрытых элементов и cookie-consent блоков.
+
+    Используется в проверках, которые анализируют «язык сайта»: TCF/GDPR-баннеры
+    (IAB Europe) на любом российском сайте могут добавлять десятки тысяч
+    английских символов и ложно валить `latin_to_cyrillic_ratio`. Аналогично
+    `<code>/<pre>` блоки на tech-сайтах — это не контент на иностранном языке,
+    а исходники.
+    """
+
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    for selector in _VISIBLE_TEXT_DROP_SELECTORS:
+        for tag in _safe_select(soup, selector):
+            tag.decompose()
+    return " ".join(soup.get_text(separator=" ", strip=True).split())
+
+
 def _is_container_selector(selector: str) -> bool:
     return selector.strip().lower() in _CONTAINER_TAGS
 
@@ -848,14 +893,20 @@ def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckRe
 
 
 def latin_to_cyrillic_ratio(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
-    """Доля латиницы в plain-text страницы > threshold → fail (default 0.7).
+    """Доля латиницы во *видимом* plain-text страницы > threshold → fail (default 0.7).
 
-    Считаем буквы кириллицы и латиницы в plain-text всей страницы (без `<script>`
-    / `<style>` / `<noscript>`). Если их сумма < 200 — `inconclusive`
-    (`evidence_missing`): мало текста для статистики. Иначе:
-    `ratio = latin / (latin + cyrillic)`. Если `ratio > threshold` → `fail`.
+    Считаем буквы кириллицы и латиницы в plain-text всей страницы после удаления
+    `<script>`/`<style>`/`<noscript>`, блоков кода (`<code>/<pre>/<kbd>/<samp>/<tt>`),
+    модалок (`<dialog>`, `role="dialog"/alertdialog"`), скрытого
+    (`aria-hidden="true"`) и cookie-consent контейнеров (IAB TCF / CMP / GDPR).
+    Если букв < 200 — `inconclusive` (`evidence_missing`): мало текста для
+    статистики. Иначе: `ratio = latin / (latin + cyrillic)`. Если
+    `ratio > threshold` → `fail`.
 
     Параметр `threshold` берётся из `signal.model_extra["threshold"]`, default 0.7.
+    Значение 0.7 — «преимущественно» по 53-ФЗ: после стрипа TCF/code/aria-hidden
+    легитимный российский контент со ссылками на бренды и термины свободно
+    укладывается ниже этого уровня.
     """
 
     threshold_raw = (signal.model_extra or {}).get("threshold", 0.7)
@@ -868,7 +919,7 @@ def latin_to_cyrillic_ratio(signal: Signal, artifacts: PageArtifacts) -> CheckRe
         )
 
     soup = _parse(artifacts.html)
-    text = _plain_text(soup)
+    text = _visible_plain_text(soup)
     cyr_count = len(_CYRILLIC_RE.findall(text))
     lat_count = len(_LATIN_RE.findall(text))
     total = cyr_count + lat_count

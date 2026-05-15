@@ -1204,3 +1204,107 @@ def test_latin_to_cyrillic_ratio_respects_custom_threshold() -> None:
     )
     result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(text)))
     assert result.status == "pass"
+
+
+def test_latin_to_cyrillic_ratio_default_threshold_is_0_7() -> None:
+    """Сигнал без threshold: ratio 0.66 (ниже 0.7) → pass; 0.74 (выше) → fail."""
+    # 200 латинских + 105 кириллических → ratio ~0.66
+    below = ("kniga " * 40) + ("книга " * 21)
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    assert latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(below))).status == "pass"
+
+    # 200 латинских + 70 кириллических → ratio ~0.74
+    above = ("kniga " * 40) + ("книга " * 14)
+    assert latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(above))).status == "fail"
+
+
+def test_latin_to_cyrillic_ratio_ignores_role_dialog_cookie_banner() -> None:
+    """TCF/CMP-баннер на английском в `[role="dialog"]` не должен влиять на ratio."""
+    russian = "Свежее молоко из деревни " * 20
+    cmp_english = "Vendors want your permission to process personal data " * 40
+    html = (
+        f"<html><body>"
+        f"<main><p>{russian}</p></main>"
+        f'<div role="dialog"><p>{cmp_english}</p></div>'
+        f"</body></html>"
+    )
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=html))
+    assert result.status == "pass", result.explanation
+
+
+def test_latin_to_cyrillic_ratio_ignores_aria_hidden_content() -> None:
+    """Контент в `[aria-hidden="true"]` (скрытый от пользователя) исключается."""
+    russian = "Свежее молоко из деревни " * 20
+    hidden_english = "Smart phone with fresh design " * 40
+    html = (
+        f"<html><body>"
+        f"<p>{russian}</p>"
+        f'<div aria-hidden="true"><p>{hidden_english}</p></div>'
+        f"</body></html>"
+    )
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=html))
+    assert result.status == "pass", result.explanation
+
+
+def test_latin_to_cyrillic_ratio_ignores_code_blocks() -> None:
+    """`<code>` и `<pre>` блоки (фрагменты кода) не должны считаться текстом сайта."""
+    russian = "Свежее молоко из деревни " * 20
+    code_block = "console.log('hello'); function fetchData(url) { return axios.get(url); } " * 30
+    html = (
+        f"<html><body>"
+        f"<p>{russian}</p>"
+        f"<pre><code>{code_block}</code></pre>"
+        f"</body></html>"
+    )
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=html))
+    assert result.status == "pass", result.explanation
+
+
+def test_latin_to_cyrillic_ratio_ignores_cmp_wrapper_by_id() -> None:
+    """CMP-обёртка по `id^="cmp"` (Quantcast Choice и т. п.) исключается."""
+    russian = "Свежее молоко из деревни " * 20
+    cmp_english = "Use precise geolocation data Store and access information " * 40
+    html = (
+        f"<html><body>"
+        f"<p>{russian}</p>"
+        f'<div id="cmpwrapper"><p>{cmp_english}</p></div>'
+        f"</body></html>"
+    )
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=html))
+    assert result.status == "pass", result.explanation
+
+
+def test_latin_to_cyrillic_ratio_still_fails_on_truly_foreign_site() -> None:
+    """Сайт реально на иностранном (без cookie-баннера) — fail с порогом 0.8."""
+    text = "Welcome to our online store buy fresh products with worldwide delivery " * 30
+    signal = PageSignal(
+        type="latin_to_cyrillic_ratio_high",
+        description="x",
+        check="latin_to_cyrillic_ratio",
+    )
+    result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(text)))
+    assert result.status == "fail", result.explanation
