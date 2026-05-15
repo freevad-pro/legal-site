@@ -108,6 +108,28 @@ make dev-frontend
 
 `pnpm` ставится один раз: `npm install -g pnpm@9.15.4` (на Node 20.x). На Node 22+ — последний pnpm подходит.
 
+## PDF-отчёт: системные зависимости
+
+PDF собирается WeasyPrint, которому нужны системные библиотеки **GTK / Pango / Cairo**.
+
+**Linux / Docker (production):**
+
+```bash
+apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+```
+
+После этого PDF работает «из коробки» — обычно ставится в Dockerfile один раз.
+
+**Windows (локальная разработка):**
+
+Без GTK runtime endpoint `/report.pdf` будет возвращать `503` (UI покажет понятный диалог со ссылкой). Чтобы PDF заработал локально:
+
+1. Скачать установщик: <https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/latest> (~30&nbsp;МБ).
+2. В мастере установки отметить «Set up PATH environment variable to include GTK+».
+3. Перезапустить терминал и `make dev`.
+
+Если PDF локально не нужен — можно работать без GTK; кнопка «PDF» подскажет, что и как поставить.
+
 ## Структура
 
 ```

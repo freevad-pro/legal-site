@@ -78,6 +78,43 @@ export function reportPdfUrl(scanId: string): string {
   return `${API_BASE}/api/v1/scans/${scanId}/report.pdf`;
 }
 
+// Качаем PDF через fetch (а не `<a download>`), чтобы:
+// 1) перехватить 503 от бэка (WeasyPrint без GTK runtime на Windows) и показать
+//    понятный текст вместо тихого сохранения .txt с JSON-телом ошибки;
+// 2) корректно отдать filename из Content-Disposition.
+export async function downloadReportPdf(scanId: string, fallbackName: string): Promise<void> {
+  const resp = await request(`/api/v1/scans/${scanId}/report.pdf`);
+  if (!resp.ok) {
+    let detail = `HTTP ${resp.status}`;
+    try {
+      const body = (await resp.json()) as { detail?: string };
+      if (body?.detail) detail = body.detail;
+    } catch {
+      // empty / non-json body
+    }
+    throw new ApiError(resp.status, detail);
+  }
+  const blob = await resp.blob();
+  const filename = parseFilename(resp.headers.get("content-disposition")) ?? fallbackName;
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function parseFilename(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename="?([^";]+)"?/i.exec(header);
+  return match?.[1] ?? null;
+}
+
 export function eventsUrl(scanId: string): string {
   return `${API_BASE}/api/v1/scans/${scanId}/events`;
 }

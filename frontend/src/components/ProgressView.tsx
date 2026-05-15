@@ -108,7 +108,7 @@ export function ProgressView({ scanId, url, onDone, onError }: Props) {
                     className={cn(
                       "h-4 w-4",
                       isDone && "text-brand",
-                      isCurrent && "text-ink-primary animate-spin",
+                      isCurrent && "text-brand animate-spin",
                       !isDone && !isCurrent && "text-ink-faint",
                     )}
                   />

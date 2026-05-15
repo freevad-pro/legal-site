@@ -200,7 +200,19 @@ async def get_scan_report(
             detail=f"PDF available only when scan is done (current: {state.status})",
         )
 
-    pdf_bytes = await render_pdf(state.result)
+    try:
+        pdf_bytes = await render_pdf(state.result)
+    except OSError as exc:
+        # WeasyPrint требует системные либы GTK/Pango/Cairo. На Windows без GTK runtime —
+        # `cannot load library 'libgobject-2.0-0'`. Логируем и возвращаем 503, фронт покажет тост.
+        logger.exception("PDF rendering failed: WeasyPrint cannot load system libraries")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "PDF rendering unavailable: required system libraries "
+                "(GTK/Pango/Cairo) are not installed"
+            ),
+        ) from exc
 
     host = urlparse(state.url).hostname or "unknown"
     date_label = (state.finished_at or datetime.now(UTC)).strftime("%Y-%m-%d")

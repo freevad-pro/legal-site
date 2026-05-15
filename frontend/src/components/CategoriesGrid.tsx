@@ -52,22 +52,19 @@ const CARDS: readonly CategoryCard[] = [
 
 export function CategoriesGrid() {
   return (
-    <section className="container py-16">
-      <div className="mb-8 flex flex-col gap-2">
-        <span className="eyebrow">Что найдём</span>
-        <h2 className="text-2xl font-bold sm:text-[28px]">
-          Шесть зон, по которым ходит проверка
-        </h2>
-      </div>
-      <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+    <section className="container pb-14">
+      <h2 className="mb-6 text-2xl font-bold sm:text-[28px]">Что найдём на сайте</h2>
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {CARDS.map((card) => (
           <li
             key={card.category}
             className="flex flex-col gap-3 rounded-card bg-bg-soft p-6"
           >
-            <card.icon className="h-7 w-7 text-ink-primary" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
+              <card.icon className="h-5 w-5 text-brand" />
+            </div>
             <h3 className="text-[17px] font-bold text-ink-primary">{card.title}</h3>
-            <p className="text-sm text-ink-secondary">{card.description}</p>
+            <p className="text-sm leading-snug text-ink-secondary">{card.description}</p>
           </li>
         ))}
       </ul>

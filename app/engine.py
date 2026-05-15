@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -26,6 +27,34 @@ from app.types import Status
 EventSink = Callable[[ScanEvent], None]
 
 logger = logging.getLogger(__name__)
+
+# Порядок прохождения категорий в SSE-стриме. Должен совпадать с CATEGORY_ORDER
+# на фронте (frontend/src/hooks/useScanStream.ts), иначе шаги прогресса будут
+# заполняться вразнобой.
+_CATEGORY_ORDER: tuple[str, ...] = (
+    "privacy",
+    "cookies",
+    "advertising",
+    "consumer",
+    "info",
+    "copyright",
+)
+
+
+def _violations_in_category_order(
+    bundle: CorpusBundle,
+) -> list[tuple[str, Violation]]:
+    law_category = {law.id: law.category for law in bundle.laws}
+
+    def order_key(item: tuple[str, Violation]) -> int:
+        law_id, _ = item
+        category = law_category.get(law_id)
+        try:
+            return _CATEGORY_ORDER.index(category) if category else len(_CATEGORY_ORDER)
+        except ValueError:
+            return len(_CATEGORY_ORDER)
+
+    return sorted(bundle.all_violations(), key=order_key)
 
 
 class Finding(BaseModel):
@@ -127,7 +156,7 @@ async def run_scan(
     _emit(ScanEvent(type="scanner_done", payload={"url": artifacts.url}))
 
     findings: list[Finding] = []
-    for law_id, violation in bundle.all_violations():
+    for law_id, violation in _violations_in_category_order(bundle):
         finding = _evaluate_violation(law_id, violation, artifacts)
         findings.append(finding)
         _emit(
@@ -142,6 +171,9 @@ async def run_scan(
                 },
             )
         )
+        # Передаём control event-loop'у, чтобы SSE-task успел отдать накопленные
+        # события клиенту — иначе все violation_evaluated приходят пачкой в конце.
+        await asyncio.sleep(0)
 
     return ScanResult(
         url=artifacts.url,

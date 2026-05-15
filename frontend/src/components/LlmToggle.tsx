@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -9,53 +8,37 @@ interface Props {
   onChange: (next: boolean) => void;
 }
 
+// Тоггл живёт внутри зелёной CTA-карточки — оформляется белым inline,
+// без отдельной кнопки «Войти» (она уже в шапке).
 export function LlmToggle({ authenticated, enabled, onChange }: Props) {
-  const disabled = !authenticated;
+  if (!authenticated) {
+    return (
+      <p className="text-sm text-white/85">
+        Расширенный анализ — доступен после входа в аккаунт.
+      </p>
+    );
+  }
 
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3 rounded-card border border-line bg-white px-4 py-3",
-        disabled && "bg-bg-soft",
-      )}
-    >
-      <div className="flex flex-col">
-        <span className="text-sm font-semibold text-ink-primary">
-          Расширенный анализ
-        </span>
-        <span className="text-xs text-ink-secondary">
-          {disabled
-            ? "Доступен после входа в аккаунт."
-            : "Подключает семантические проверки текстов на сайте."}
-        </span>
-      </div>
-
-      {disabled ? (
-        <Link
-          href="/login"
-          className="text-sm font-medium text-link hover:underline"
-        >
-          Войти
-        </Link>
-      ) : (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          onClick={() => onChange(!enabled)}
+    <label className="inline-flex cursor-pointer items-center gap-3 text-sm text-white/95">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        onClick={() => onChange(!enabled)}
+        className={cn(
+          "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors",
+          enabled ? "bg-white" : "bg-white/30",
+        )}
+      >
+        <span
           className={cn(
-            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-            enabled ? "bg-brand" : "bg-ink-faint",
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow ring-0 transition",
+            enabled ? "translate-x-5 bg-brand" : "translate-x-0 bg-white",
           )}
-        >
-          <span
-            className={cn(
-              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition",
-              enabled ? "translate-x-5" : "translate-x-0",
-            )}
-          />
-        </button>
-      )}
-    </div>
+        />
+      </button>
+      <span>Расширенный анализ</span>
+    </label>
   );
 }

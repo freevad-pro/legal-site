@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { FileDown, Info, RotateCcw } from "lucide-react";
+import { FileDown, Info, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DomainFavicon } from "@/components/DomainFavicon";
 import { FindingCard } from "@/components/FindingCard";
+import { PdfErrorDialog } from "@/components/PdfErrorDialog";
 import { auditNumber, hostFromUrl } from "@/lib/favicon";
-import { reportPdfUrl } from "@/lib/api";
+import { ApiError, downloadReportPdf } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Finding, ScanSummary, Severity } from "@/lib/types";
 
@@ -78,6 +79,33 @@ export function ResultView({ summary }: { summary: ScanSummary }) {
 
   const number = auditNumber(summary.scan_id, summary.started_at);
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfDialog, setPdfDialog] = useState<{
+    open: boolean;
+    kind: "missing-deps" | "generic";
+    detail: string | null;
+  }>({ open: false, kind: "generic", detail: null });
+
+  async function handleDownloadPdf() {
+    setPdfBusy(true);
+    try {
+      const date = (summary.finished_at ?? summary.started_at).slice(0, 10);
+      const fallbackName = `legal-audit-${host}-${date}.pdf`;
+      await downloadReportPdf(summary.scan_id, fallbackName);
+    } catch (err) {
+      // 503 = бэк ответил, что нет системных либ (GTK/Pango/Cairo).
+      const isMissingDeps = err instanceof ApiError && err.status === 503;
+      const detail = err instanceof Error ? err.message : "Неизвестная ошибка";
+      setPdfDialog({
+        open: true,
+        kind: isMissingDeps ? "missing-deps" : "generic",
+        detail,
+      });
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="sticky top-16 z-30 border-b border-line bg-white/94 backdrop-blur supports-[backdrop-filter]:bg-white/80">
@@ -98,12 +126,14 @@ export function ResultView({ summary }: { summary: ScanSummary }) {
                 <span className="hidden sm:inline">Новая</span>
               </Button>
             </Link>
-            <a href={reportPdfUrl(summary.scan_id)} download>
-              <Button size="sm">
+            <Button size="sm" onClick={handleDownloadPdf} disabled={pdfBusy}>
+              {pdfBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <FileDown className="h-4 w-4" />
-                <span>PDF</span>
-              </Button>
-            </a>
+              )}
+              <span>PDF</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -210,18 +240,27 @@ export function ResultView({ summary }: { summary: ScanSummary }) {
           </section>
         ) : null}
 
+        <PdfErrorDialog
+          open={pdfDialog.open}
+          kind={pdfDialog.kind}
+          detail={pdfDialog.detail}
+          onClose={() => setPdfDialog((prev) => ({ ...prev, open: false }))}
+        />
+
         <section className="rounded-card bg-brand p-8 text-center text-white">
           <h2 className="text-2xl font-bold">Готово. Сохраните отчёт</h2>
           <p className="mt-2 text-white/90">
             PDF можно скачать одним кликом и поделиться с разработчиком, юристом, маркетологом.
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <a href={reportPdfUrl(summary.scan_id)} download>
-              <Button variant="dark">
+            <Button variant="dark" onClick={handleDownloadPdf} disabled={pdfBusy}>
+              {pdfBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <FileDown className="h-4 w-4" />
-                <span>Скачать PDF</span>
-              </Button>
-            </a>
+              )}
+              <span>Скачать PDF</span>
+            </Button>
             <Link href="/">
               <Button variant="outline" className="bg-transparent text-white border-white/40 hover:bg-white/10">
                 Проверить другой

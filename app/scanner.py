@@ -2,12 +2,14 @@
 
 Структуры: `PageArtifacts`, `Cookie`, `NetworkEntry`.
 Функция `collect(url, timeout)` поднимает headless Chromium через Playwright,
-ходит по URL, ждёт `networkidle`, собирает DOM/headers/cookies/network-лог.
+ходит по URL, ждёт `load`, опционально пытается дождаться `networkidle` под коротким
+таймаутом — собирает DOM/headers/cookies/network-лог.
 В итерации 3 — только главная страница; многостраничный обход — итерация 4.
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from datetime import UTC, datetime
 from typing import Literal
@@ -100,9 +102,14 @@ async def collect(url: str, timeout: int, user_agent: str) -> PageArtifacts:
                 page = await context.new_page()
                 page.on("request", _on_request)
 
-                response = await page.goto(url, timeout=timeout * 1000, wait_until="networkidle")
+                # `networkidle` ненадёжен: на сайтах с аналитикой/long-poll сеть не утихает
+                # и goto падает по таймауту. Ждём `load`, затем коротко пытаемся достичь
+                # `networkidle` — даём шанс ленивым скриптам выставить cookies, но не блокируемся.
+                response = await page.goto(url, timeout=timeout * 1000, wait_until="load")
                 if response is None:
                     raise ScanError(f"no response from {url!r}")
+                with contextlib.suppress(PlaywrightError):
+                    await page.wait_for_load_state("networkidle", timeout=3000)
 
                 final_url = page.url
                 status = response.status

@@ -25,7 +25,16 @@ export function EvidencePreview({ finding }: { finding: Finding }) {
   const templateName = finding.evidence_template;
   if (templateName && templateName in TEMPLATES) {
     const Component = TEMPLATES[templateName];
-    return <Component />;
+    // Mini-preview — это визуальный mock-up «как это выглядит на сайте». Сами поля
+    // evidence/explanation от чека содержат конкретику (какие именно ключевые слова
+    // не нашлись и т.п.), так что под mock-up'ом дублируем GenericEvidence — иначе
+    // в UI теряется информация, которая есть в PDF.
+    return (
+      <div className="flex flex-col gap-3">
+        <Component />
+        <GenericEvidence finding={finding} />
+      </div>
+    );
   }
   return <GenericEvidence finding={finding} />;
 }
