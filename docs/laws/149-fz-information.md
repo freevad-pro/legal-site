@@ -511,17 +511,17 @@ violations:
           required_absent:
             - '[class*="license" i]'
             - '[class*="copyright" i]'
-      site_signals:
-        - type: domain_in_anti_piracy_blocklist
-          description: "Домен присутствует в реестре заблокированных по ст. 15.2 / 15.6"
-          check: rkn_registry_lookup
-          source: "https://nap.rkn.gov.ru/"
         - type: no_dmca_takedown_address
           description: "На сайте нет email/формы для заявлений правообладателей (ст. 10 ч. 2)"
           required_absent:
             - 'a[href^="mailto:"][href*="abuse" i]'
             - 'a[href^="mailto:"][href*="dmca" i]'
             - 'a[href^="mailto:"][href*="copyright" i]'
+      site_signals:
+        - type: domain_in_anti_piracy_blocklist
+          description: "Домен присутствует в реестре заблокированных по ст. 15.2 / 15.6"
+          check: rkn_registry_lookup
+          source: "https://nap.rkn.gov.ru/"
 
     penalties:
       - subject: organization

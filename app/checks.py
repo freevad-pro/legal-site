@@ -1110,8 +1110,13 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
             sub_results.append(_check_required_protocol(signal.required_protocol, artifacts))
 
     if not sub_results:
+        # Сигнал в YAML не имеет ни check, ни любого из обработчиков —
+        # пустое описание detection. Это конфигурационная ошибка; для
+        # пользователя такая «проверка» неинформативна, скрываем через
+        # check_not_implemented (см. engine, ADR-0003).
         return CheckResult(
             status="inconclusive",
-            explanation="у сигнала нет полей, по которым можно проверять",
+            explanation="проверка не настроена для автоматического выполнения",
+            inconclusive_reason="check_not_implemented",
         )
     return aggregate_or(sub_results)
