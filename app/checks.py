@@ -23,8 +23,13 @@
 - `html_patterns` + `required_absent` — **триггер + эскейп**:
   - Если триггер `html_patterns` ничего не нашёл — `pass` (повод для проверки не возник).
   - Если все `html_patterns` — голые контейнерные теги (`footer|header|main|body|
-    nav|article|section|aside`) — для каждого найденного контейнера проверяем
-    наличие хоть одного из `required_absent` внутри. Контейнер без эскейпа → `fail`.
+    nav|article|section|aside`) — собираем все найденные контейнеры. Если **хоть
+    у одного** есть `required_absent` элемент → `pass` (например, в корневом
+    `<footer>` сайта есть ссылка на политику — nested-`<footer>`'ы карточек
+    статей её отсутствие не валит). Если ни у одного нет → `fail` с evidence
+    первого контейнера. Логика «хоть один с эскейпом → pass» нужна для сайтов
+    с nested-структурой (Vue/React SPA): множественные `<footer class="tm-block__footer">`
+    внутри карточек контента — типичный паттерн, и `<footer>` сайта — лишь один из них.
   - Иначе (document-scope): триггер сработал; если в документе есть хоть один
     `required_absent` элемент → `pass` («рядом есть нужный элемент»), иначе → `fail`.
 
@@ -184,15 +189,18 @@ def _check_pattern_with_escape(
                 explanation=f"trigger containers not found: {list(html_patterns)}",
             )
         for container in containers:
-            if not any(_safe_select(container, sel) for sel in required_absent):
+            if any(_safe_select(container, sel) for sel in required_absent):
                 return CheckResult(
-                    status="fail",
-                    evidence=_truncate(str(container)),
-                    explanation=(
-                        f"container has none of the escape elements: {list(required_absent)}"
-                    ),
+                    status="pass",
+                    explanation="at least one container has an escape element",
                 )
-        return CheckResult(status="pass", explanation="all containers contain escape element")
+        return CheckResult(
+            status="fail",
+            evidence=_truncate(str(containers[0])),
+            explanation=(
+                f"no container has any of the escape elements: {list(required_absent)}"
+            ),
+        )
 
     triggers: list[Tag] = []
     for pattern in html_patterns:

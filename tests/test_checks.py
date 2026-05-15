@@ -151,6 +151,51 @@ def test_evaluate_required_absent_container_scope_inconclusive_when_no_container
     assert evaluate(signal, artifacts).status == "inconclusive"
 
 
+def test_evaluate_required_absent_container_scope_nested_pass() -> None:
+    """Nested-структура: множественные `<footer>` внутри карточек статей.
+
+    Корневой footer сайта содержит ссылку на политику, nested-footer'ы карточек
+    нет. По новой семантике («хоть у одного контейнера есть эскейп → pass»)
+    результат — pass: на сайте политика опубликована, отсутствие ссылки в
+    nested-блоках не образует нарушения.
+    """
+    signal = PageSignal(
+        type="missing_policy_link_in_footer",
+        description="В подвале нет ссылки на политику",
+        html_patterns=("footer",),
+        required_absent=('a[href*="privacy" i]',),
+    )
+    html = (
+        "<html><body>"
+        "<main>"
+        '<article><footer class="card-footer"><a href="/related">Related</a></footer></article>'
+        '<article><footer class="card-footer"><a href="/share">Share</a></footer></article>'
+        "</main>"
+        '<footer class="site-footer"><a href="/privacy">Политика</a></footer>'
+        "</body></html>"
+    )
+    assert evaluate(signal, _artifacts(html=html)).status == "pass"
+
+
+def test_evaluate_required_absent_container_scope_all_nested_no_escape_fails() -> None:
+    """Если ни в одном контейнере нет escape — fail c evidence первого."""
+    signal = PageSignal(
+        type="missing_policy_link_in_footer",
+        description="В подвале нет ссылки на политику",
+        html_patterns=("footer",),
+        required_absent=('a[href*="privacy" i]',),
+    )
+    html = (
+        "<html><body>"
+        '<article><footer class="card-footer"><a href="/related">Related</a></footer></article>'
+        '<footer class="site-footer"><a href="/about">About</a></footer>'
+        "</body></html>"
+    )
+    result = evaluate(signal, _artifacts(html=html))
+    assert result.status == "fail"
+    assert "card-footer" in (result.evidence or "")
+
+
 # ----- required_keywords / required_headers / required_protocol ----- #
 
 

@@ -97,11 +97,8 @@ violations:
             - "TinEye"
         - type: no_license_section
           description: "Нет раздела о правах на используемые материалы"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "источники изображений"
-            - "лицензии"
-            - "правообладатели"
+          check: image_attribution_audit
+          notes: "Lookup на главной по ключам «источники изображений / лицензии / правообладатели» даёт fail для медиа собственного авторства (статьи, блоги) — раздел про чужие лицензии им не нужен. Реально проверка нужна только для агрегаторов и каталогов чужого контента — это семантический LLM-уровень."
 
     penalties:
       - subject: citizen
@@ -163,11 +160,8 @@ violations:
             - "antiplagiat.ru"
         - type: aggregator_without_licenses
           description: "Агрегатор публикует новости без соглашений с источниками"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "лицензионный договор"
-            - "источник публикации"
-            - "по соглашению с"
+          check: text_provenance_audit
+          notes: "Lookup на главной по «лицензионный договор / источник публикации» даёт fail для блогов и медиа собственного авторства. Реально проверка нужна только для агрегаторов — LLM-уровень."
 
     penalties:
       - subject: citizen
@@ -222,12 +216,8 @@ violations:
       site_signals:
         - type: no_music_license_disclosure
           description: "Нет упоминания лицензий на медиа"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "музыка предоставлена"
-            - "РАО"
-            - "ВОИС"
-            - "music license"
+          check: media_embed_license_audit
+          notes: "Lookup по «РАО / ВОИС / music license» даёт fail для сайтов без фоновой музыки и медиа — упоминание лицензий им не нужно. Реально проверка нужна только при наличии аудио/видео-контента на сайте — LLM-уровень или новый детектор «есть медиа на странице»."
 
     penalties:
       - subject: citizen
@@ -288,10 +278,8 @@ violations:
           source: "https://www.fips.ru/registers-web/"
         - type: no_dealer_status_disclosed
           description: "Нет указания статуса дилера / реселлера"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "официальный дилер"
-            - "авторизованный реселлер"
+          check: trademark_use_audit
+          notes: "Lookup по «официальный дилер / авторизованный реселлер» применим только к маркетплейсам и каталогам с чужими брендами. На медиа/блогах его отсутствие — не нарушение. Реально проверка нужна вместе с детектом ecommerce + LLM-сверкой брендов с реестром Роспатента."
 
     penalties:
       - subject: citizen
@@ -399,11 +387,8 @@ violations:
       site_signals:
         - type: no_copyright_section
           description: "Нет раздела с указанием правообладателей"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "правообладатель"
-            - "источники изображений"
-            - "credits"
+          check: image_attribution_audit
+          notes: "Lookup на главной по «правообладатель / источники изображений / credits» даёт fail для сайтов собственного авторства — раздел про управление правами на чужие материалы им не нужен. LLM-уровень с детектом сторонних медиа."
 
     penalties:
       - subject: organization
@@ -435,16 +420,13 @@ violations:
       защиту в суде.
 
     detection:
-      page_signals:
-        - type: no_copyright_in_footer
-          description: "В подвале отсутствует знак ©"
-          html_patterns:
-            - 'footer'
-          required_absent:
-            - 'footer:-soup-contains("©")'
-            - 'footer:-soup-contains("Copyright")'
-            - 'footer:-soup-contains("Все права защищены")'
       site_signals:
+        # page_signal `no_copyright_in_footer` (html_patterns: ['footer']
+        # + required_absent на ©/Copyright/Все права защищены) удалён
+        # 2026-05-15: ловился на nested-`<footer>` карточек статей. К тому же
+        # знак © по ст. 1259 ч. 4 не обязателен, лишь рекомендуется (ст. 1271).
+        # site_signal lookup ниже остаётся для проверки наличия раздела
+        # «пользовательское соглашение».
         - type: no_terms_of_use
           description: "Нет пользовательского соглашения"
           check: lookup_pages_by_keywords

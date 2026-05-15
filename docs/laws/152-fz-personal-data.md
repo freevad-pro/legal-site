@@ -154,17 +154,15 @@ violations:
       на сайте — самостоятельный состав правонарушения по ч. 3 ст. 13.11 КоАП.
 
     detection:
-      page_signals:
-        - type: missing_policy_link_in_footer
-          description: "В подвале сайта отсутствует ссылка на политику обработки ПДн"
-          html_patterns:
-            - 'footer'
-          required_absent:
-            - 'a[href*="privacy" i]'
-            - 'a[href*="policy" i]'
-            - 'a[href*="personal" i]'
-            - 'a[href*="pdn" i]'
       site_signals:
+        # page_signal `missing_policy_link_in_footer` (html_patterns: ['footer']
+        # + required_absent: [a[href*="privacy"], ...]) удалён 2026-05-15:
+        # 1) site_signal lookup ниже уже корректно проверяет «есть ли политика
+        #    где-то на сайте», что и требует ст. 18.1 ч. 2 («в свободном доступе»).
+        # 2) на Vue/React SPA (habr) корневой footer часто не `<footer>`, а
+        #    `<div class="page-footer">`, поэтому селектор ловит только nested
+        #    `<footer>`-блоки внутри карточек статей — fail на любом таком блоке
+        #    без ссылки даже если политика на сайте опубликована.
         - type: privacy_policy_page_missing
           description: "На сайте нет отдельной страницы с политикой обработки ПДн"
           check: lookup_pages_by_keywords
@@ -234,15 +232,13 @@ violations:
           description: "Текст политики слишком короткий (менее 1500 символов) — почти наверняка не полный"
           check: text_length_threshold
           min_chars: 1500
-        - type: policy_missing_required_sections
-          description: "В тексте политики отсутствуют ключевые разделы"
-          required_keywords:
-            - "цели обработки"
-            - "правовые основания"
-            - "категории субъектов"
-            - "сроки обработки"
-            - "права субъекта"
-            - "контакт"
+          # sub-signal `policy_missing_required_sections` с required_keywords удалён:
+          # required_keywords ищется в plain-text главной страницы, а не в политике
+          # (известное ограничение итерации 3 — multipage-обход отложен). Это
+          # давало fail на любом сайте, где главная страница — не политика
+          # (то есть на всех). Полнота политики — семантическая LLM-проверка
+          # в итерации 7. `policy_too_short` (длина политики ≥ 1500) грубо
+          # покрывает то же самое для детерминированного слоя.
       site_signals:
         - type: policy_outdated
           description: "Дата редакции политики старше 2 лет или отсутствует"

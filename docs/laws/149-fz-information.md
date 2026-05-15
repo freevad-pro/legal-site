@@ -89,17 +89,16 @@ violations:
 
     detection:
       page_signals:
-        - type: missing_owner_block_in_footer
-          description: "В подвале сайта нет блока с реквизитами владельца"
-          html_patterns:
-            - 'footer'
-          required_absent:
-            - 'footer :is([class*="contacts" i], [class*="about" i], [class*="company" i])'
-            - 'address'
         - type: missing_contact_email
           description: "На сайте нет email для обращений (для целей ст. 15.7)"
           required_absent:
             - 'a[href^="mailto:"]'
+        # page_signal `missing_owner_block_in_footer` (html_patterns: ['footer']
+        # + required_absent: footer :is(...)) удалён 2026-05-15: site_signal
+        # ниже уже корректно проверяет «есть ли страница «Контакты»/«О компании»
+        # где-то на сайте», что и требует ст. 10 ч. 2. На SPA корневой footer
+        # часто не `<footer>` (а `<div>`), nested-`<footer>`'ы в карточках
+        # статей давали fail даже когда нужный раздел опубликован.
       site_signals:
         - type: missing_legal_info_page
           description: "Нет страницы «Контакты» / «О компании» / «Реквизиты»"
@@ -182,28 +181,18 @@ violations:
       декодирования по требованию ФСБ.
 
     detection:
-      page_signals:
-        - type: user_messages_feature
-          description: "На сайте есть форма сообщений между пользователями / чат / комментарии"
-          html_patterns:
-            - 'form[action*="comment" i]'
-            - 'form[action*="message" i]'
-            - '[class*="chat" i]'
-            - '[id*="chat" i]'
-            - '[class*="comments" i]'
-            - 'textarea[name*="message" i]'
-        - type: forum_or_board_engine
-          description: "Признаки форумного / UGC-движка (phpBB, IPB, Discourse и т. п.)"
-          html_patterns:
-            - 'meta[name="generator"][content*="phpBB" i]'
-            - 'meta[name="generator"][content*="Discourse" i]'
-            - 'link[href*="forum" i]'
       site_signals:
         - type: not_in_ori_registry
           description: "Владелец сайта не значится в реестре ОРИ"
           check: rkn_registry_lookup
           source: "https://97-fz.rkn.gov.ru/organizer-dissemination/"
           inputs: [domain, organization_name, inn]
+          # page_signals `user_messages_feature` и `forum_or_board_engine` удалены:
+          # они срабатывали через html_patterns как «нашли комментарии → fail»,
+          # что бессмысленно — applicability: [ugc] уже активирует violation для
+          # UGC-сайтов. Наличие комментариев не означает «не зарегистрирован в ОРИ»,
+          # это требует обращения к реестру РКН. До реализации rkn_registry_lookup
+          # (LLM/registry в итерации 7) violation корректно даёт inconclusive.
 
     penalties:
       - subject: citizen
@@ -364,10 +353,8 @@ violations:
           source: "https://rkn.gov.ru/"
         - type: no_user_rules_published
           description: "Отсутствуют опубликованные правила использования с порядком обращений"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "правила использования"
-            - "порядок рассмотрения обращений"
+          check: internal_documents_audit
+          notes: "Lookup по ключам «правила использования / порядок рассмотрения обращений» давал fail на любом UGC-сайте, хотя «соцсеть с аудиторией >500 тыс/сутки и личными страницами» по ст. 10.6 — узкое определение, к большинству UGC-сайтов неприменимо. Для применимости violation нужна квалификация «социальная сеть» через traffic_threshold + наличие профилей пользователей (LLM-уровень). До тех пор — заглушка."
 
     penalties:
       - subject: citizen

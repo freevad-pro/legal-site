@@ -208,6 +208,8 @@ violations:
           html_patterns:
             - '.banner, .promo, .ad-block, [class*="promo" i]'
             - '[class*="advert" i], .cta, [class*="cta" i]'
+          check: latin_only_in_selectors
+          notes: "Без check: универсальный `_check_html_patterns_only` фейлится на любом `.promo`-блоке независимо от содержимого. `latin_only_in_selectors` проверяет, что внутри есть латиница и нет кириллицы (с поддержкой value-атрибутов для submit-кнопок). Реальная семантика 38-ФЗ — текст без русского эквивалента — частично закрыта; «иностранный без идентичного перевода» в полном объёме — LLM-уровень."
 
     penalties:
       - subject: citizen

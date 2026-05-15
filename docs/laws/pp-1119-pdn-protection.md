@@ -387,18 +387,12 @@ violations:
       site_signals:
         - type: no_protection_level_in_policy
           description: "В политике / сведениях о мерах защиты не указан уровень защищённости ИСПДн"
-          check: lookup_pages_by_keywords
-          keywords:
-            - "уровень защищённости"
-            - "УЗ1"
-            - "УЗ2"
-            - "УЗ3"
-            - "УЗ4"
+          check: internal_documents_audit
+          notes: "Уровень защищённости (УЗ1–УЗ4) определяется внутренним приказом оператора по ПП РФ № 1119 п. 6–11 — это документ для регулятора, на сайте практически не публикуется. Lookup по ключам на главной даёт fail для всех. Реальная проверка — аудит внутренней документации оператора, LLM-уровень или интеграция с реестром РКН."
         - type: no_threat_model_disclosure
           description: "Не указан тип актуальных угроз (1, 2, 3)"
-          required_keywords:
-            - "актуальные угрозы"
-            - "модель угроз"
+          check: internal_documents_audit
+          notes: "Модель угроз — внутренний документ оператора по приказу ФСТЭК № 21, на сайте не публикуется. required_keywords в plain-text главной — мисдирекшн."
 
     penalties:
       - subject: official

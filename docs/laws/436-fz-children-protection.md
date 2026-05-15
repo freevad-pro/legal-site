@@ -61,30 +61,14 @@ violations:
       по ч. 1 ст. 6.17 КоАП.
 
     detection:
-      page_signals:
-        - type: no_age_marking_in_header
-          description: "В шапке/footer нет знака возрастной маркировки"
-          html_patterns:
-            - 'header'
-            - 'footer'
-          required_absent:
-            - '[class*="age" i]'
-            - '[class*="rating" i]'
-            - 'img[alt*="0+"]'
-            - 'img[alt*="6+"]'
-            - 'img[alt*="12+"]'
-            - 'img[alt*="16+"]'
-            - 'img[alt*="18+"]'
-        - type: no_age_marking_near_articles
-          description: "У статей нет индивидуальной маркировки"
-          html_patterns:
-            - 'article'
-            - '[class*="post" i]'
-            - '[class*="news" i]'
-          required_absent:
-            - '[class*="age-rating" i]'
-            - '[class*="age-mark" i]'
       site_signals:
+        # page_signal `no_age_marking_in_header` (header/footer + required_absent
+        # классы возрастной маркировки) и `no_age_marking_near_articles`
+        # (article/[class*="post"]/[class*="news"] + required_absent) удалены
+        # 2026-05-15: оба ловились container-scope логикой на nested-блоках
+        # карточек статей. На SPA вроде habr тысячи `<article>` без класса
+        # `age-rating` — fail на каждой первой. site_signal lookup ниже уже
+        # корректно проверяет наличие знака маркировки где-либо на сайте.
         - type: age_marking_absent_sitewide
           description: "На главной нигде нет знака маркировки"
           check: lookup_pages_by_keywords
