@@ -24,6 +24,9 @@ frontend/.next/
 scan-*.json
 scan-*.log
 
+# Вспомогательные скрипты и временные артефакты разработки
+temp/
+
 # OS
 .DS_Store
 Thumbs.db
