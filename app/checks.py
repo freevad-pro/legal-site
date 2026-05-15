@@ -199,9 +199,9 @@ def _check_html_patterns_only(patterns: Iterable[str], artifacts: PageArtifacts)
             return CheckResult(
                 status="fail",
                 evidence=_truncate(str(matches[0])),
-                explanation=f"selector matched: {pattern}",
+                explanation=f"сматчился селектор: {pattern}",
             )
-    return CheckResult(status="pass", explanation="no html_patterns matched")
+    return CheckResult(status="pass", explanation="ни один html_pattern не сматчился")
 
 
 def _check_required_absent_only(
@@ -212,11 +212,11 @@ def _check_required_absent_only(
     if any(_safe_select(soup, sel) for sel in required_absent):
         return CheckResult(
             status="pass",
-            explanation="at least one required element present in document",
+            explanation="в документе присутствует хотя бы один требуемый элемент",
         )
     return CheckResult(
         status="fail",
-        explanation=f"none of required elements found: {list(required_absent)}",
+        explanation=f"не найдено ни одного из требуемых элементов: {list(required_absent)}",
     )
 
 
@@ -237,19 +237,19 @@ def _check_pattern_with_escape(
         if not containers:
             return CheckResult(
                 status="inconclusive",
-                explanation=f"trigger containers not found: {list(html_patterns)}",
+                explanation=f"не найдены контейнеры-триггеры: {list(html_patterns)}",
             )
         for container in containers:
             if any(_safe_select(container, sel) for sel in required_absent):
                 return CheckResult(
                     status="pass",
-                    explanation="at least one container has an escape element",
+                    explanation="хотя бы в одном контейнере присутствует элемент-эскейп",
                 )
         return CheckResult(
             status="fail",
             evidence=_truncate(str(containers[0])),
             explanation=(
-                f"no container has any of the escape elements: {list(required_absent)}"
+                f"ни в одном контейнере нет элементов-эскейпов: {list(required_absent)}"
             ),
         )
 
@@ -257,13 +257,15 @@ def _check_pattern_with_escape(
     for pattern in html_patterns:
         triggers.extend(_safe_select(soup, pattern))
     if not triggers:
-        return CheckResult(status="pass", explanation="trigger not matched")
+        return CheckResult(status="pass", explanation="триггер не сматчился")
     if any(_safe_select(soup, sel) for sel in required_absent):
-        return CheckResult(status="pass", explanation="escape elements present in document")
+        return CheckResult(
+            status="pass", explanation="элементы-эскейпы присутствуют в документе"
+        )
     return CheckResult(
         status="fail",
         evidence=_truncate(str(triggers[0])),
-        explanation=f"trigger matched without escape: {list(required_absent)}",
+        explanation=f"триггер сматчился без эскейпа: {list(required_absent)}",
     )
 
 
@@ -274,9 +276,12 @@ def _check_required_keywords(keywords: Iterable[str], artifacts: PageArtifacts) 
     if missing:
         return CheckResult(
             status="fail",
-            explanation=f"missing keywords in main page text: {missing}",
+            explanation=f"в тексте главной страницы отсутствуют ключевые слова: {missing}",
         )
-    return CheckResult(status="pass", explanation="all keywords present in main page text")
+    return CheckResult(
+        status="pass",
+        explanation="все ключевые слова присутствуют в тексте главной страницы",
+    )
 
 
 def _check_prohibited_keywords(keywords: Iterable[str], artifacts: PageArtifacts) -> CheckResult:
@@ -297,11 +302,13 @@ def _check_prohibited_keywords(keywords: Iterable[str], artifacts: PageArtifacts
             return CheckResult(
                 status="fail",
                 evidence=kw,
-                explanation=f"prohibited keyword found in main page text: {kw!r}",
+                explanation=(
+                    f"найдено запрещённое ключевое слово в тексте главной страницы: {kw!r}"
+                ),
             )
     return CheckResult(
         status="pass",
-        explanation="no prohibited keywords found in main page text",
+        explanation="в тексте главной страницы запрещённых ключевых слов не найдено",
     )
 
 
@@ -343,13 +350,13 @@ def _check_pattern_contains_prohibited(
                         status="fail",
                         evidence=raw,
                         explanation=(
-                            f"prohibited keyword {raw!r} found inside element "
-                            f"matched by selector {pattern!r}"
+                            f"найдено запрещённое ключевое слово {raw!r} внутри элемента, "
+                            f"сматченного селектором {pattern!r}"
                         ),
                     )
     return CheckResult(
         status="pass",
-        explanation="no prohibited keywords found inside trigger elements",
+        explanation="внутри триггерных элементов запрещённых ключевых слов не найдено",
     )
 
 
@@ -359,9 +366,9 @@ def _check_required_headers(required: Iterable[str], artifacts: PageArtifacts) -
     if missing:
         return CheckResult(
             status="fail",
-            explanation=f"missing response headers: {missing}",
+            explanation=f"отсутствуют заголовки ответа: {missing}",
         )
-    return CheckResult(status="pass", explanation="all required headers present")
+    return CheckResult(status="pass", explanation="все требуемые заголовки присутствуют")
 
 
 def _check_required_protocol(scheme: str, artifacts: PageArtifacts) -> CheckResult:
@@ -370,9 +377,9 @@ def _check_required_protocol(scheme: str, artifacts: PageArtifacts) -> CheckResu
         return CheckResult(
             status="fail",
             evidence=artifacts.url,
-            explanation=f"expected protocol {scheme!r}, got {actual!r}",
+            explanation=f"ожидался протокол {scheme!r}, получен {actual!r}",
         )
-    return CheckResult(status="pass", explanation=f"protocol matches {scheme!r}")
+    return CheckResult(status="pass", explanation=f"протокол соответствует {scheme!r}")
 
 
 def aggregate_or(results: Iterable[CheckResult]) -> CheckResult:
@@ -395,7 +402,7 @@ def aggregate_or(results: Iterable[CheckResult]) -> CheckResult:
     if not results:
         return CheckResult(
             status="inconclusive",
-            explanation="no sub-results to aggregate",
+            explanation="нет суб-результатов для агрегации",
             inconclusive_reason="evidence_missing",
         )
 
@@ -415,7 +422,7 @@ def aggregate_or(results: Iterable[CheckResult]) -> CheckResult:
             inconclusive_reason=chosen.inconclusive_reason,
         )
 
-    return CheckResult(status="pass", explanation="all sub-checks passed")
+    return CheckResult(status="pass", explanation="все суб-проверки прошли")
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +463,7 @@ def _not_implemented(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     name = signal.check or "<unknown>"
     return CheckResult(
         status="inconclusive",
-        explanation=f"check {name!r} not implemented in iteration 3",
+        explanation=f"проверка {name!r} ещё не реализована",
         inconclusive_reason="check_not_implemented",
     )
 
@@ -503,7 +510,9 @@ def link_near_form_to_privacy(signal: Signal, artifacts: PageArtifacts) -> Check
     soup = _parse(artifacts.html)
     forms = [f for f in soup.find_all("form") if isinstance(f, Tag) and _is_pd_form(f)]
     if not forms:
-        return CheckResult(status="inconclusive", explanation="no PD forms found on page")
+        return CheckResult(
+            status="inconclusive", explanation="на странице не найдены формы сбора ПДн"
+        )
 
     extra_keywords = tuple((signal.model_extra or {}).get("keywords", ()))
     keywords = tuple(kw.lower() for kw in (*_PRIVACY_LINK_KEYWORDS, *extra_keywords))
@@ -530,9 +539,12 @@ def link_near_form_to_privacy(signal: Signal, artifacts: PageArtifacts) -> Check
             return CheckResult(
                 status="fail",
                 evidence=_truncate(str(form)),
-                explanation="PD form has no privacy/consent link nearby",
+                explanation="рядом с формой сбора ПДн нет ссылки на политику или согласие",
             )
-    return CheckResult(status="pass", explanation="every PD form has a privacy link nearby")
+    return CheckResult(
+        status="pass",
+        explanation="у каждой формы сбора ПДн рядом есть ссылка на политику",
+    )
 
 
 def lookup_pages_by_keywords(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
@@ -547,7 +559,7 @@ def lookup_pages_by_keywords(signal: Signal, artifacts: PageArtifacts) -> CheckR
     raw_keywords = (signal.model_extra or {}).get("keywords") or _POLICY_URL_KEYWORDS
     keywords = tuple(str(kw).strip().lower() for kw in raw_keywords if str(kw).strip())
     if not keywords:
-        return CheckResult(status="inconclusive", explanation="no keywords provided")
+        return CheckResult(status="inconclusive", explanation="не заданы ключевые слова")
 
     for anchor in soup.find_all("a"):
         if not isinstance(anchor, Tag):
@@ -561,9 +573,9 @@ def lookup_pages_by_keywords(signal: Signal, artifacts: PageArtifacts) -> CheckR
             return CheckResult(
                 status="pass",
                 evidence=urljoin(artifacts.url, href),
-                explanation="matching link found in DOM",
+                explanation="в DOM найдена подходящая ссылка",
             )
-    return CheckResult(status="fail", explanation="no matching link found in DOM")
+    return CheckResult(status="fail", explanation="в DOM не найдено подходящих ссылок")
 
 
 def http_status_check(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
@@ -574,12 +586,14 @@ def http_status_check(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     except (TypeError, ValueError):
         return CheckResult(
             status="inconclusive",
-            explanation=f"invalid expected_status: {expected_raw!r}",
+            explanation=f"некорректное значение expected_status: {expected_raw!r}",
         )
 
     url = _find_policy_url(artifacts)
     if url is None:
-        return CheckResult(status="inconclusive", explanation="policy URL not found on page")
+        return CheckResult(
+            status="inconclusive", explanation="на странице не найден URL политики"
+        )
 
     try:
         with httpx.Client(timeout=10.0, follow_redirects=True) as client:
@@ -588,19 +602,19 @@ def http_status_check(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
         return CheckResult(
             status="inconclusive",
             evidence=url,
-            explanation=f"http error: {exc}",
+            explanation=f"ошибка HTTP: {exc}",
         )
 
     if response.status_code == expected:
         return CheckResult(
             status="pass",
             evidence=url,
-            explanation=f"status {response.status_code} matches expected {expected}",
+            explanation=f"статус {response.status_code} соответствует ожидаемому {expected}",
         )
     return CheckResult(
         status="fail",
         evidence=url,
-        explanation=f"expected status {expected}, got {response.status_code}",
+        explanation=f"ожидался статус {expected}, получен {response.status_code}",
     )
 
 
@@ -637,30 +651,32 @@ def text_length_threshold(signal: Signal, artifacts: PageArtifacts) -> CheckResu
     except (TypeError, ValueError):
         return CheckResult(
             status="inconclusive",
-            explanation=f"invalid min_chars: {min_chars_raw!r}",
+            explanation=f"некорректное значение min_chars: {min_chars_raw!r}",
         )
 
     url = _find_policy_url(artifacts)
     if url is None:
-        return CheckResult(status="inconclusive", explanation="policy URL not found on page")
+        return CheckResult(
+            status="inconclusive", explanation="на странице не найден URL политики"
+        )
     text = _fetch_text(url)
     if text is None:
         return CheckResult(
             status="inconclusive",
             evidence=url,
-            explanation="failed to fetch policy",
+            explanation="не удалось загрузить политику",
         )
 
     if len(text) < min_chars:
         return CheckResult(
             status="fail",
             evidence=url,
-            explanation=f"policy text length {len(text)} < {min_chars}",
+            explanation=f"длина текста политики {len(text)} меньше минимальных {min_chars}",
         )
     return CheckResult(
         status="pass",
         evidence=url,
-        explanation=f"policy text length {len(text)} ≥ {min_chars}",
+        explanation=f"длина текста политики {len(text)} не меньше требуемых {min_chars}",
     )
 
 
@@ -712,13 +728,15 @@ def date_in_document(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     del signal  # параметры не используются — всё из текущего контекста
     url = _find_policy_url(artifacts)
     if url is None:
-        return CheckResult(status="inconclusive", explanation="policy URL not found on page")
+        return CheckResult(
+            status="inconclusive", explanation="на странице не найден URL политики"
+        )
     text = _fetch_text(url)
     if text is None:
         return CheckResult(
             status="inconclusive",
             evidence=url,
-            explanation="failed to fetch policy",
+            explanation="не удалось загрузить политику",
         )
 
     dates = _extract_dates(text)
@@ -726,7 +744,7 @@ def date_in_document(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
         return CheckResult(
             status="fail",
             evidence=url,
-            explanation="no document date found in policy text",
+            explanation="в тексте политики не найдена дата редакции",
         )
 
     latest = max(dates)
@@ -735,12 +753,12 @@ def date_in_document(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
         return CheckResult(
             status="fail",
             evidence=url,
-            explanation=f"latest date {latest.isoformat()} is older than 2 years",
+            explanation=f"последняя дата редакции {latest.isoformat()} старше 2 лет",
         )
     return CheckResult(
         status="pass",
         evidence=url,
-        explanation=f"latest date {latest.isoformat()} within 2 years",
+        explanation=f"последняя дата редакции {latest.isoformat()} не старше 2 лет",
     )
 
 
@@ -790,9 +808,9 @@ def cookie_set_before_consent(signal: Signal, artifacts: PageArtifacts) -> Check
         return CheckResult(
             status="fail",
             evidence=", ".join(trackers),
-            explanation="tracker cookies set without user consent",
+            explanation="трекинговые cookies установлены без согласия пользователя",
         )
-    return CheckResult(status="pass", explanation="no tracker cookies set")
+    return CheckResult(status="pass", explanation="трекинговые cookies не установлены")
 
 
 _INDEXOF_PATHS: tuple[str, ...] = (
@@ -819,9 +837,9 @@ def indexof_check(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
             return CheckResult(
                 status="fail",
                 evidence=url,
-                explanation="directory listing enabled",
+                explanation="включён листинг каталога",
             )
-    return CheckResult(status="pass", explanation="no directory listing exposed")
+    return CheckResult(status="pass", explanation="листинг каталога не открыт")
 
 
 _CYRILLIC_RE = re.compile(r"[А-Яа-яЁё]")
@@ -878,7 +896,7 @@ def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckRe
     if not html_patterns:
         return CheckResult(
             status="inconclusive",
-            explanation="no html_patterns to inspect",
+            explanation="не задано html_patterns для проверки",
             inconclusive_reason="evidence_missing",
         )
 
@@ -896,11 +914,11 @@ def latin_only_in_selectors(signal: Signal, artifacts: PageArtifacts) -> CheckRe
             return CheckResult(
                 status="fail",
                 evidence=_truncate(text),
-                explanation=f"selector {pattern!r} matched element without cyrillic",
+                explanation=f"селектор {pattern!r} сматчил элемент без кириллицы",
             )
     return CheckResult(
         status="pass",
-        explanation="every matched element contains cyrillic letters",
+        explanation="каждый сматченный элемент содержит кириллические буквы",
     )
 
 
@@ -927,7 +945,7 @@ def latin_to_cyrillic_ratio(signal: Signal, artifacts: PageArtifacts) -> CheckRe
     except (TypeError, ValueError):
         return CheckResult(
             status="inconclusive",
-            explanation=f"invalid threshold: {threshold_raw!r}",
+            explanation=f"некорректное значение threshold: {threshold_raw!r}",
         )
 
     soup = _parse(artifacts.html)
@@ -938,7 +956,7 @@ def latin_to_cyrillic_ratio(signal: Signal, artifacts: PageArtifacts) -> CheckRe
     if total < _LATIN_RATIO_MIN_LETTERS:
         return CheckResult(
             status="inconclusive",
-            explanation=f"too little text to assess: {total} letters",
+            explanation=f"слишком мало текста для оценки: {total} букв",
             inconclusive_reason="evidence_missing",
         )
 
@@ -946,12 +964,12 @@ def latin_to_cyrillic_ratio(signal: Signal, artifacts: PageArtifacts) -> CheckRe
     if ratio > threshold:
         return CheckResult(
             status="fail",
-            evidence=f"latin/(latin+cyr) = {ratio:.2f}",
-            explanation=f"latin-cyrillic ratio {ratio:.2f} > threshold {threshold:.2f}",
+            evidence=f"доля латиницы = {ratio:.2f}",
+            explanation=f"доля латиницы {ratio:.2f} выше порога {threshold:.2f}",
         )
     return CheckResult(
         status="pass",
-        explanation=f"latin-cyrillic ratio {ratio:.2f} ≤ threshold {threshold:.2f}",
+        explanation=f"доля латиницы {ratio:.2f} не выше порога {threshold:.2f}",
     )
 
 
@@ -1016,7 +1034,7 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     if "combine" in extra:
         return CheckResult(
             status="inconclusive",
-            explanation="combine-signals not supported in iteration 3",
+            explanation="сигналы с combine пока не поддерживаются",
             inconclusive_reason="check_not_implemented",
         )
 
@@ -1026,7 +1044,7 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
             logger.warning("unknown check name: %s (signal type=%s)", signal.check, signal.type)
             return CheckResult(
                 status="inconclusive",
-                explanation=f"unknown check {signal.check!r}",
+                explanation=f"неизвестная проверка {signal.check!r}",
                 inconclusive_reason="check_not_implemented",
             )
         return fn(signal, artifacts)
@@ -1045,7 +1063,7 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     ):
         return CheckResult(
             status="inconclusive",
-            explanation="text-trigger+escape requires semantic check (deferred to LLM)",
+            explanation="текстовый триггер + эскейп требует семантической проверки",
             inconclusive_reason="context_dependent",
         )
 
@@ -1094,6 +1112,6 @@ def evaluate(signal: Signal, artifacts: PageArtifacts) -> CheckResult:
     if not sub_results:
         return CheckResult(
             status="inconclusive",
-            explanation="signal has no detectable fields",
+            explanation="у сигнала нет полей, по которым можно проверять",
         )
     return aggregate_or(sub_results)

@@ -648,7 +648,7 @@ def test_unknown_check_returns_inconclusive() -> None:
     )
     result = evaluate(signal, _artifacts())
     assert result.status == "inconclusive"
-    assert "unknown check" in (result.explanation or "")
+    assert "неизвестная проверка" in (result.explanation or "")
     assert result.inconclusive_reason == "check_not_implemented"
 
 
@@ -936,7 +936,7 @@ def test_date_in_document_fail_when_no_date(fake_httpx: type[_FakeHttpxClient]) 
     )
     result = date_in_document(signal, artifacts)
     assert result.status == "fail"
-    assert "no document date" in (result.explanation or "")
+    assert "не найдена дата" in (result.explanation or "")
 
 
 def test_date_in_document_fail_when_date_too_old(fake_httpx: type[_FakeHttpxClient]) -> None:
@@ -1225,7 +1225,7 @@ def test_latin_to_cyrillic_ratio_fail_on_english_text() -> None:
     )
     result = latin_to_cyrillic_ratio(signal, _artifacts(html=_ratio_html(text)))
     assert result.status == "fail"
-    assert "ratio" in (result.explanation or "")
+    assert "доля латиницы" in (result.explanation or "")
 
 
 def test_latin_to_cyrillic_ratio_inconclusive_on_short_text() -> None:
